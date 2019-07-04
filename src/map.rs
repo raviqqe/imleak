@@ -3,10 +3,6 @@ use std::hash::Hash;
 use hamt::{Hamt, HamtIterator};
 use node::Node;
 
-/// Map data structure of HAMT.
-///
-/// Note that every method does not modify the original map but creates a new
-/// one if necessary.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Map<K, V> {
     size: usize,
@@ -14,7 +10,6 @@ pub struct Map<K, V> {
 }
 
 impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
-    /// Creates a new map.
     pub fn new() -> Self {
         Map {
             size: 0,
@@ -22,7 +17,6 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
         }
     }
 
-    /// Inserts a key-value pair into a map.
     pub fn insert(&self, k: K, v: V) -> Self {
         let (h, b) = self.hamt.insert(k, v);
 
@@ -32,7 +26,6 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
         }
     }
 
-    /// Deletes a key and its corresponding value from a map.
     pub fn delete(&self, k: &K) -> Option<Self> {
         self.hamt.delete(k).map(|h| Map {
             size: self.size - 1,
@@ -40,13 +33,10 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
         })
     }
 
-    /// Finds a key and its corresponding value in a map.
     pub fn find(&self, k: &K) -> Option<&V> {
         self.hamt.find(k)
     }
 
-    /// Removes the first element in a map and returns a new map containing the
-    /// rest of elements.
     pub fn first_rest(&self) -> Option<(&K, &V, Self)> {
         self.hamt.first_rest().map(|(k, v, h)| {
             (
@@ -60,7 +50,6 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
         })
     }
 
-    /// Returns a size of a map.
     pub fn size(&self) -> usize {
         self.size
     }
