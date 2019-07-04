@@ -1,31 +1,26 @@
-# hamt-sync
+# imleak
 
-[![Circle CI](https://img.shields.io/circleci/project/github/raviqqe/hamt-sync.svg?style=flat-square)](https://circleci.com/gh/raviqqe/hamt-sync)
-[![Crates.io](https://img.shields.io/crates/v/hamt-sync.svg?style=flat-square)](https://crates.io/crates/hamt-sync)
-[![License](https://img.shields.io/github/license/raviqqe/hamt-sync.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+[![Circle CI](https://img.shields.io/circleci/project/github/raviqqe/imleak.svg?style=flat-square)](https://circleci.com/gh/raviqqe/imleak)
+[![Crates.io](https://img.shields.io/crates/v/imleak.svg?style=flat-square)](https://crates.io/crates/imleak)
+[![License](https://img.shields.io/github/license/raviqqe/imleak.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-HAMT implementation whose sub-trees can be shared over threads.
+Immutable data structures not GC'd.
 
-[Hash-Array Mapped Trie (HAMT)](https://en.wikipedia.org/wiki/Hash_array_mapped_trie)
-is a data structure popular as a map (a.k.a. associative array or dictionary)
-or set.
-Its immutable variant is adopted widely by functional programming languages
-like Scala and Clojure to implement immutable and memory-efficient associative
-arrays and sets.
+## Background
 
-## Technical notes
+This library is created for its goals below.
 
-The implementation canonicalizes tree structures of HAMTs by eliminating
-intermediate nodes during delete operations as described
-in [the CHAMP paper][champ].
+- No GC code
+  - Meant to be used with lower-level GC mechanism or conservative GC.
+- Fully-permissive licensed
+  - MIT
+  - To give full control to library users.
 
-## References
+If you are looking for just a usual library of immutable data structures for daily use cases, use one of the following.
 
-- [Ideal Hash Trees](https://infoscience.epfl.ch/record/64398/files/idealhashtrees.pdf)
-- [Optimizing Hash-Array Mapped Tries for Fast and Lean Immutable JVM Collections][champ]
+- [im-rs](https://github.com/bodil/im-rs)
+- [rpds](https://github.com/orium/rpds)
 
 ## License
 
 [MIT](LICENSE)
-
-[champ]: https://michael.steindorfer.name/publications/oopsla15.pdf
