@@ -1,6 +1,6 @@
 use std::hash::Hash;
 
-use hamt::{HAMT, HAMTIterator};
+use hamt::{HAMTIterator, HAMT};
 use node::Node;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

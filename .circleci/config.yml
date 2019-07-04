@@ -5,6 +5,9 @@ jobs:
       - image: rustlang/rust:nightly
     steps:
       - checkout
+      - run: rustup component add clippy rustfmt
       - run: cargo build
+      - run: cargo fmt -- --check
+      - run: cargo clippy
       - run: cargo test
       - run: cargo bench
