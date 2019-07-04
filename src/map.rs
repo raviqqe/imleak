@@ -55,6 +55,12 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
     }
 }
 
+impl<K: Clone + Hash + PartialEq, V: Clone> Default for Map<K, V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct MapIterator<'a, K: 'a, V: 'a>(HAMTIterator<'a, K, V>);
 
 impl<'a, K, V> Iterator for MapIterator<'a, K, V> {

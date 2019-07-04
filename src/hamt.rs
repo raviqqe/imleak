@@ -44,11 +44,8 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HAMT<K, V> {
     fn set_entry(&self, i: usize, e: Entry<K, V>) -> Self {
         let mut es = self.entries.clone();
         es[i] = e;
-        self.from_entries(es)
-    }
 
-    fn from_entries(&self, es: [Entry<K, V>; NUM_ENTRIES]) -> Self {
-        HAMT {
+        Self {
             level: self.level,
             entries: es,
         }
@@ -271,13 +268,13 @@ impl<'a, K, V> Iterator for HAMTIterator<'a, K, V> {
             }
             (NodeRef::Bucket(b), i) => {
                 if i == b.to_vec().len() {
-                    return self.next();
+                    self.next()
+                } else {
+                    self.0.push((t.0, i + 1));
+
+                    let (ref k, ref v) = b.to_vec()[i];
+                    Some((k, v))
                 }
-
-                self.0.push((t.0, i + 1));
-
-                let (ref k, ref v) = b.to_vec()[i];
-                return Some((k, v));
             }
         })
     }
