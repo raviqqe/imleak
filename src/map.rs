@@ -1,19 +1,19 @@
 use std::hash::Hash;
 
-use hamt::{Hamt, HamtIterator};
+use hamt::{HAMT, HAMTIterator};
 use node::Node;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Map<K, V> {
     size: usize,
-    hamt: Hamt<K, V>,
+    hamt: HAMT<K, V>,
 }
 
 impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
     pub fn new() -> Self {
         Map {
             size: 0,
-            hamt: Hamt::new(0),
+            hamt: HAMT::new(0),
         }
     }
 
@@ -55,7 +55,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
     }
 }
 
-pub struct MapIterator<'a, K: 'a, V: 'a>(HamtIterator<'a, K, V>);
+pub struct MapIterator<'a, K: 'a, V: 'a>(HAMTIterator<'a, K, V>);
 
 impl<'a, K, V> Iterator for MapIterator<'a, K, V> {
     type Item = (&'a K, &'a V);

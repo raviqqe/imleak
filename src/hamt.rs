@@ -12,7 +12,7 @@ const NUM_ENTRIES: usize = 32;
 enum Entry<K, V> {
     Empty,
     KeyValue(K, V),
-    Hamt(Arc<Hamt<K, V>>),
+    HAMT(Arc<HAMT<K, V>>),
     Bucket(Bucket<K, V>),
 }
 
@@ -23,15 +23,15 @@ impl<K, V> Default for Entry<K, V> {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct Hamt<K, V> {
+pub struct HAMT<K, V> {
     // TODO: Use bitmap.
     level: u8,
     entries: [Entry<K, V>; NUM_ENTRIES],
 }
 
-impl<K: Clone + Hash + PartialEq, V: Clone> Hamt<K, V> {
+impl<K: Clone + Hash + PartialEq, V: Clone> HAMT<K, V> {
     pub fn new(l: u8) -> Self {
-        Hamt {
+        HAMT {
             level: l,
             entries: Default::default(),
         }
@@ -48,7 +48,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Hamt<K, V> {
     }
 
     fn from_entries(&self, es: [Entry<K, V>; NUM_ENTRIES]) -> Self {
-        Hamt {
+        HAMT {
             level: self.level,
             entries: es,
         }
@@ -66,13 +66,13 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Hamt<K, V> {
     fn is_normal(&self) -> bool {
         self.entries.iter().all(|e| match *e {
             Entry::Bucket(ref b) => !b.is_singleton(),
-            Entry::Hamt(ref h) => h.is_normal() && !h.is_singleton(),
+            Entry::HAMT(ref h) => h.is_normal() && !h.is_singleton(),
             _ => true,
         })
     }
 }
 
-impl<K: Clone + Hash + PartialEq, V: Clone> Node for Hamt<K, V> {
+impl<K: Clone + Hash + PartialEq, V: Clone> Node for HAMT<K, V> {
     type Key = K;
     type Value = V;
 
@@ -90,8 +90,8 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for Hamt<K, V> {
                     self.set_entry(
                         i,
                         if self.level < MAX_LEVEL {
-                            Entry::Hamt(Arc::new(
-                                Hamt::new(self.level + 1)
+                            Entry::HAMT(Arc::new(
+                                HAMT::new(self.level + 1)
                                     .insert(kk.clone(), vv.clone())
                                     .0
                                     .insert(k, v)
@@ -104,9 +104,9 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for Hamt<K, V> {
                     true,
                 )
             }
-            Entry::Hamt(ref h) => {
+            Entry::HAMT(ref h) => {
                 let (h, new) = h.insert(k, v);
-                (self.set_entry(i, Entry::Hamt(Arc::new(h))), new)
+                (self.set_entry(i, Entry::HAMT(Arc::new(h))), new)
             }
             Entry::Bucket(ref b) => {
                 let (b, new) = b.insert(k, v);
@@ -129,9 +129,9 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for Hamt<K, V> {
                         return None;
                     }
                 }
-                Entry::Hamt(ref h) => match h.delete(k) {
+                Entry::HAMT(ref h) => match h.delete(k) {
                     None => return None,
-                    Some(h) => node_to_entry(&h, |h| Entry::Hamt(Arc::new(h))),
+                    Some(h) => node_to_entry(&h, |h| Entry::HAMT(Arc::new(h))),
                 },
                 Entry::Bucket(ref b) => match b.delete(k) {
                     None => return None,
@@ -151,7 +151,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for Hamt<K, V> {
                     None
                 }
             }
-            Entry::Hamt(ref h) => h.find(k),
+            Entry::HAMT(ref h) => h.find(k),
             Entry::Bucket(ref b) => b.find(k),
         }
     }
@@ -161,12 +161,12 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for Hamt<K, V> {
             match *e {
                 Entry::Empty => {}
                 Entry::KeyValue(ref k, ref v) => return Some((k, v, self.delete(k).unwrap())),
-                Entry::Hamt(ref h) => {
+                Entry::HAMT(ref h) => {
                     let (k, v, r) = h.first_rest().unwrap();
                     return Some((
                         k,
                         v,
-                        self.set_entry(i, node_to_entry(&r, |h| Entry::Hamt(Arc::new(h)))),
+                        self.set_entry(i, node_to_entry(&r, |h| Entry::HAMT(Arc::new(h)))),
                     ));
                 }
                 Entry::Bucket(ref b) => {
@@ -197,7 +197,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for Hamt<K, V> {
             .map(|e| match *e {
                 Entry::Empty => 0,
                 Entry::KeyValue(_, _) => 1,
-                Entry::Hamt(ref h) => h.size(),
+                Entry::HAMT(ref h) => h.size(),
                 Entry::Bucket(ref b) => b.size(),
             })
             .sum()
@@ -228,28 +228,28 @@ fn hash<K: Hash>(k: &K) -> u64 {
 
 #[derive(Debug)]
 enum NodeRef<'a, K: 'a, V: 'a> {
-    Hamt(&'a Hamt<K, V>),
+    HAMT(&'a HAMT<K, V>),
     Bucket(&'a Bucket<K, V>),
 }
 
 #[derive(Debug)]
-pub struct HamtIterator<'a, K: 'a, V: 'a>(Vec<(NodeRef<'a, K, V>, usize)>);
+pub struct HAMTIterator<'a, K: 'a, V: 'a>(Vec<(NodeRef<'a, K, V>, usize)>);
 
-impl<'a, K, V> IntoIterator for &'a Hamt<K, V> {
-    type IntoIter = HamtIterator<'a, K, V>;
+impl<'a, K, V> IntoIterator for &'a HAMT<K, V> {
+    type IntoIter = HAMTIterator<'a, K, V>;
     type Item = (&'a K, &'a V);
 
     fn into_iter(self) -> Self::IntoIter {
-        HamtIterator(vec![(NodeRef::Hamt(&self), 0)])
+        HAMTIterator(vec![(NodeRef::HAMT(&self), 0)])
     }
 }
 
-impl<'a, K, V> Iterator for HamtIterator<'a, K, V> {
+impl<'a, K, V> Iterator for HAMTIterator<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.pop().and_then(|t| match t {
-            (NodeRef::Hamt(h), i) => {
+            (NodeRef::HAMT(h), i) => {
                 if i == NUM_ENTRIES {
                     return self.next();
                 }
@@ -258,8 +258,8 @@ impl<'a, K, V> Iterator for HamtIterator<'a, K, V> {
 
                 match h.entries[i] {
                     Entry::Empty => self.next(),
-                    Entry::Hamt(ref h) => {
-                        self.0.push((NodeRef::Hamt(h), 0));
+                    Entry::HAMT(ref h) => {
+                        self.0.push((NodeRef::HAMT(h), 0));
                         self.next()
                     }
                     Entry::KeyValue(ref k, ref v) => Some((k, v)),
@@ -294,12 +294,12 @@ mod test {
 
     #[test]
     fn new() {
-        Hamt::new(0) as Hamt<usize, usize>;
+        HAMT::new(0) as HAMT<usize, usize>;
     }
 
     #[test]
     fn insert() {
-        let h = Hamt::new(0);
+        let h = HAMT::new(0);
 
         assert_eq!(h.size(), 0);
 
@@ -321,7 +321,7 @@ mod test {
 
     #[test]
     fn insert_many_in_order() {
-        let mut h = Hamt::new(0);
+        let mut h = HAMT::new(0);
 
         for i in 0..NUM_ITERATIONS {
             let (hh, b) = h.insert(i, i);
@@ -333,7 +333,7 @@ mod test {
 
     #[test]
     fn insert_many_at_random() {
-        let mut h: Hamt<usize, usize> = Hamt::new(0);
+        let mut h: HAMT<usize, usize> = HAMT::new(0);
 
         for i in 0..NUM_ITERATIONS {
             let k = random();
@@ -344,7 +344,7 @@ mod test {
 
     #[test]
     fn delete() {
-        let h = Hamt::new(0);
+        let h = HAMT::new(0);
 
         assert_eq!(h.insert(0, 0).0.delete(&0), Some(h.clone()));
         assert_eq!(h.insert(0, 0).0.delete(&1), None);
@@ -361,7 +361,7 @@ mod test {
 
     #[test]
     fn insert_delete_many() {
-        let mut h: Hamt<i16, i16> = Hamt::new(0);
+        let mut h: HAMT<i16, i16> = HAMT::new(0);
 
         for _ in 0..NUM_ITERATIONS {
             let k = random();
@@ -386,7 +386,7 @@ mod test {
 
     #[test]
     fn find() {
-        let h = Hamt::new(0);
+        let h = HAMT::new(0);
 
         assert_eq!(h.insert(0, 0).0.find(&0), Some(&0));
         assert_eq!(h.insert(0, 0).0.find(&1), None);
@@ -399,7 +399,7 @@ mod test {
 
     #[test]
     fn first_rest() {
-        let mut h: Hamt<i16, i16> = Hamt::new(0);
+        let mut h: HAMT<i16, i16> = HAMT::new(0);
 
         for _ in 0..NUM_ITERATIONS {
             let k = random();
@@ -409,7 +409,7 @@ mod test {
         }
 
         for _ in 0..h.size() {
-            let new: Hamt<i16, i16>;
+            let new: HAMT<i16, i16>;
 
             {
                 let (k, _, r) = h.first_rest().unwrap();
@@ -425,12 +425,12 @@ mod test {
             assert!(h.is_normal());
         }
 
-        assert_eq!(h, Hamt::new(0));
+        assert_eq!(h, HAMT::new(0));
     }
 
     #[test]
     fn is_singleton() {
-        let h = Hamt::new(0);
+        let h = HAMT::new(0);
 
         assert!(!h.is_singleton());
         assert!(h.insert(0, 0).0.is_singleton());
@@ -440,7 +440,7 @@ mod test {
     #[test]
     fn equality() {
         for _ in 0..8 {
-            let mut hs: [Hamt<i16, i16>; 2] = [Hamt::new(0), Hamt::new(0)];
+            let mut hs: [HAMT<i16, i16>; 2] = [HAMT::new(0), HAMT::new(0)];
             let mut is: Vec<i16> = (0..NUM_ITERATIONS).map(|_| random()).collect();
             let mut ds: Vec<i16> = (0..NUM_ITERATIONS).map(|_| random()).collect();
 
@@ -463,7 +463,7 @@ mod test {
 
     #[test]
     fn collision() {
-        let mut h = Hamt::new(MAX_LEVEL);
+        let mut h = HAMT::new(MAX_LEVEL);
         let mut s = HashSet::new();
 
         for k in 0.. {
@@ -493,7 +493,7 @@ mod test {
 
         for l in vec![0, MAX_LEVEL] {
             for s in &ss {
-                let mut h: Hamt<i16, i16> = Hamt::new(l);
+                let mut h: HAMT<i16, i16> = HAMT::new(l);
                 let mut m: HashMap<i16, i16> = HashMap::new();
 
                 for _ in 0..*s {
@@ -528,7 +528,7 @@ mod test {
         let ks = keys();
 
         b.iter(|| {
-            let mut h = Hamt::new(0);
+            let mut h = HAMT::new(0);
 
             for k in &ks {
                 h = h.insert(k, k).0;
@@ -539,7 +539,7 @@ mod test {
     #[bench]
     fn bench_find_1000(b: &mut Bencher) {
         let ks = keys();
-        let mut h = Hamt::new(0);
+        let mut h = HAMT::new(0);
 
         for k in &ks {
             h = h.insert(k, k).0;
