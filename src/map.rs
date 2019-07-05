@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::hash::Hash;
 
 use hamt::{HAMTIterator, HAMT};
@@ -26,14 +27,20 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
         }
     }
 
-    pub fn delete(&self, k: &K) -> Option<Self> {
+    pub fn remove<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<Self>
+    where
+        K: Borrow<Q>,
+    {
         self.hamt.remove(k).map(|h| Map {
             size: self.size - 1,
             hamt: h,
         })
     }
 
-    pub fn get(&self, k: &K) -> Option<&V> {
+    pub fn get<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+    {
         self.hamt.get(k)
     }
 
@@ -126,18 +133,18 @@ mod test {
     }
 
     #[test]
-    fn delete() {
+    fn remove() {
         let h = Map::new();
 
-        assert_eq!(h.insert(0, 0).delete(&0), Some(h.clone()));
-        assert_eq!(h.insert(0, 0).delete(&1), None);
-        assert_eq!(h.insert(0, 0).insert(1, 0).delete(&0), Some(h.insert(1, 0)));
-        assert_eq!(h.insert(0, 0).insert(1, 0).delete(&1), Some(h.insert(0, 0)));
-        assert_eq!(h.insert(0, 0).insert(1, 0).delete(&2), None);
+        assert_eq!(h.insert(0, 0).remove(&0), Some(h.clone()));
+        assert_eq!(h.insert(0, 0).remove(&1), None);
+        assert_eq!(h.insert(0, 0).insert(1, 0).remove(&0), Some(h.insert(1, 0)));
+        assert_eq!(h.insert(0, 0).insert(1, 0).remove(&1), Some(h.insert(0, 0)));
+        assert_eq!(h.insert(0, 0).insert(1, 0).remove(&2), None);
     }
 
     #[test]
-    fn insert_delete_many() {
+    fn insert_remove_many() {
         let mut h: Map<i16, i16> = Map::new();
 
         for _ in 0..NUM_ITERATIONS {
@@ -151,7 +158,7 @@ mod test {
                 assert_eq!(h.size(), if found { s } else { s + 1 });
                 assert_eq!(h.get(&k), Some(&k));
             } else {
-                h = h.delete(&k).unwrap_or(h);
+                h = h.remove(&k).unwrap_or(h);
 
                 assert_eq!(h.size(), if found { s - 1 } else { s });
                 assert_eq!(h.get(&k), None);
@@ -214,7 +221,7 @@ mod test {
                 }
 
                 for d in &ds {
-                    *h = h.delete(d).unwrap_or(h.clone());
+                    *h = h.remove(d).unwrap_or(h.clone());
                 }
             }
 
