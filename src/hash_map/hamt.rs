@@ -285,7 +285,8 @@ impl<'a, K, V> Iterator for HAMTIterator<'a, K, V> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use super::super::node::Node;
+    use super::{hash, HAMT, MAX_LEVEL};
     use rand::{random, seq::SliceRandom, thread_rng};
     use std::collections::{HashMap, HashSet};
     use test::Bencher;

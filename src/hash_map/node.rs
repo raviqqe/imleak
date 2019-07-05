@@ -6,11 +6,11 @@ where
     Self: Sized,
 {
     // TODO: Move out the removed value as Option<Value>.
-    fn insert(&self, K, V) -> (Self, bool);
-    fn remove<Q: ?Sized + Hash + PartialEq>(&self, &Q) -> Option<Self>
+    fn insert(&self, k: K, v: V) -> (Self, bool);
+    fn remove<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<Self>
     where
         K: Borrow<Q>;
-    fn get<Q: ?Sized + Hash + PartialEq>(&self, &Q) -> Option<&V>
+    fn get<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<&V>
     where
         K: Borrow<Q>;
     fn first_rest(&self) -> Option<(&K, &V, Self)>;
