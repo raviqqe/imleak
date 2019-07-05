@@ -98,7 +98,7 @@ mod test {
 
     #[test]
     fn new() {
-        HashMap::new() as HashMap<usize, usize>;
+        HashMap::<usize, usize>::new();
     }
 
     #[test]
@@ -188,18 +188,12 @@ mod test {
         }
 
         for _ in 0..h.size() {
-            let new: HashMap<i16, i16>;
+            let (k, _, r) = h.first_rest().unwrap();
 
-            {
-                let (f, _, r) = h.first_rest().unwrap();
+            assert_eq!(r.size(), h.size() - 1);
+            assert_eq!(r.get(k), None);
 
-                assert_eq!(r.size(), h.size() - 1);
-                assert_eq!(r.get(f), None);
-
-                new = r;
-            }
-
-            h = new;
+            h = r;
         }
 
         assert_eq!(h, HashMap::new());
