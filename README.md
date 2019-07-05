@@ -16,7 +16,9 @@ This library is created for its goals below.
   - MIT
   - To give full control to library users.
 
-If you are looking for just a usual library of immutable data structures for daily use cases, use one of the following.
+## Alternatives
+
+If you are looking for just a usual library of immutable data structures for daily use cases and do not care about licenses, please use one of the following.
 
 - [im-rs](https://github.com/bodil/im-rs)
 - [rpds](https://github.com/orium/rpds)
