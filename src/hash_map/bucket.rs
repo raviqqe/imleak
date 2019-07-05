@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 use std::hash::Hash;
 use std::sync::Arc;
 
-use node::Node;
+use super::node::Node;
 
 // TODO: Fix Eq and PartialEq impl.
 // TODO: Unwrap Arc.

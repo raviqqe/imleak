@@ -1,8 +1,8 @@
 use std::borrow::Borrow;
 use std::hash::Hash;
 
-use hamt::{HAMTIterator, HAMT};
-use node::Node;
+use super::hamt::{HAMTIterator, HAMT};
+use super::node::Node;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Map<K, V> {

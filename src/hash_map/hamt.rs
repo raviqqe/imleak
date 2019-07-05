@@ -3,8 +3,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use bucket::Bucket;
-use node::Node;
+use super::bucket::Bucket;
+use super::node::Node;
 
 const MAX_LEVEL: u8 = 64 / 5;
 const NUM_ENTRIES: usize = 32;

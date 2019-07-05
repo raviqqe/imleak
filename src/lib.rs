@@ -5,9 +5,6 @@ extern crate rand;
 #[cfg(test)]
 extern crate test;
 
-mod bucket;
-mod hamt;
-mod map;
-mod node;
+mod hash_map;
 
-pub use map::Map;
+pub use hash_map::Map;
