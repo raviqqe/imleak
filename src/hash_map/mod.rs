@@ -1,6 +1,6 @@
 mod bucket;
 mod hamt;
-mod map;
+mod hash_map;
 mod node;
 
-pub use self::map::Map;
+pub use hash_map::HashMap;

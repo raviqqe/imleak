@@ -5,12 +5,12 @@ use super::hamt::{HAMTIterator, HAMT};
 use super::node::Node;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct Map<K, V> {
+pub struct HashMap<K, V> {
     size: usize,
     hamt: HAMT<K, V>,
 }
 
-impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
+impl<K: Clone + Hash + PartialEq, V: Clone> HashMap<K, V> {
     pub fn new() -> Self {
         Self {
             size: 0,
@@ -62,15 +62,15 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
     }
 }
 
-impl<K: Clone + Hash + PartialEq, V: Clone> Default for Map<K, V> {
+impl<K: Clone + Hash + PartialEq, V: Clone> Default for HashMap<K, V> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-pub struct MapIterator<'a, K: 'a, V: 'a>(HAMTIterator<'a, K, V>);
+pub struct HashMapIterator<'a, K: 'a, V: 'a>(HAMTIterator<'a, K, V>);
 
-impl<'a, K, V> Iterator for MapIterator<'a, K, V> {
+impl<'a, K, V> Iterator for HashMapIterator<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -78,18 +78,18 @@ impl<'a, K, V> Iterator for MapIterator<'a, K, V> {
     }
 }
 
-impl<'a, K, V> IntoIterator for &'a Map<K, V> {
-    type IntoIter = MapIterator<'a, K, V>;
+impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
+    type IntoIter = HashMapIterator<'a, K, V>;
     type Item = (&'a K, &'a V);
 
     fn into_iter(self) -> Self::IntoIter {
-        MapIterator(self.hamt.into_iter())
+        HashMapIterator(self.hamt.into_iter())
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::Map;
+    use super::HashMap;
     use rand::{random, seq::SliceRandom, thread_rng};
     use std::thread::spawn;
     use test::Bencher;
@@ -98,12 +98,12 @@ mod test {
 
     #[test]
     fn new() {
-        Map::new() as Map<usize, usize>;
+        HashMap::new() as HashMap<usize, usize>;
     }
 
     #[test]
     fn insert() {
-        let h = Map::new();
+        let h = HashMap::new();
 
         assert_eq!(h.size(), 0);
         assert_eq!(h.insert(0, 0).size(), 1);
@@ -113,7 +113,7 @@ mod test {
 
     #[test]
     fn insert_many_in_order() {
-        let mut h = Map::new();
+        let mut h = HashMap::new();
 
         for i in 0..NUM_ITERATIONS {
             h = h.insert(i, i);
@@ -123,7 +123,7 @@ mod test {
 
     #[test]
     fn insert_many_at_random() {
-        let mut h: Map<usize, usize> = Map::new();
+        let mut h: HashMap<usize, usize> = HashMap::new();
 
         for i in 0..NUM_ITERATIONS {
             let k = random();
@@ -134,7 +134,7 @@ mod test {
 
     #[test]
     fn remove() {
-        let h = Map::new();
+        let h = HashMap::new();
 
         assert_eq!(h.insert(0, 0).remove(&0), Some(h.clone()));
         assert_eq!(h.insert(0, 0).remove(&1), None);
@@ -145,7 +145,7 @@ mod test {
 
     #[test]
     fn insert_remove_many() {
-        let mut h: Map<i16, i16> = Map::new();
+        let mut h: HashMap<i16, i16> = HashMap::new();
 
         for _ in 0..NUM_ITERATIONS {
             let k = random();
@@ -168,7 +168,7 @@ mod test {
 
     #[test]
     fn get() {
-        let h = Map::new();
+        let h = HashMap::new();
 
         assert_eq!(h.insert(0, 0).get(&0), Some(&0));
         assert_eq!(h.insert(0, 0).get(&1), None);
@@ -181,14 +181,14 @@ mod test {
 
     #[test]
     fn first_rest() {
-        let mut h: Map<i16, i16> = Map::new();
+        let mut h: HashMap<i16, i16> = HashMap::new();
 
         for _ in 0..NUM_ITERATIONS {
             h = h.insert(random(), 0);
         }
 
         for _ in 0..h.size() {
-            let new: Map<i16, i16>;
+            let new: HashMap<i16, i16>;
 
             {
                 let (f, _, r) = h.first_rest().unwrap();
@@ -202,13 +202,13 @@ mod test {
             h = new;
         }
 
-        assert_eq!(h, Map::new());
+        assert_eq!(h, HashMap::new());
     }
 
     #[test]
     fn equality() {
         for _ in 0..8 {
-            let mut hs: [Map<i16, i16>; 2] = [Map::new(), Map::new()];
+            let mut hs: [HashMap<i16, i16>; 2] = [HashMap::new(), HashMap::new()];
             let mut is: Vec<i16> = (0..NUM_ITERATIONS).map(|_| random()).collect();
             let mut ds: Vec<i16> = (0..NUM_ITERATIONS).map(|_| random()).collect();
 
@@ -231,9 +231,9 @@ mod test {
 
     #[test]
     fn send_and_sync() {
-        let m: Map<usize, usize> = Map::new();
+        let m: HashMap<usize, usize> = HashMap::new();
         spawn(move || m);
-        let m: Map<String, String> = Map::new();
+        let m: HashMap<String, String> = HashMap::new();
         spawn(move || m);
     }
 
@@ -246,7 +246,7 @@ mod test {
         let ks = keys();
 
         b.iter(|| {
-            let mut h = Map::new();
+            let mut h = HashMap::new();
 
             for k in &ks {
                 h = h.insert(k, k);
@@ -257,7 +257,7 @@ mod test {
     #[bench]
     fn bench_get_1000(b: &mut Bencher) {
         let ks = keys();
-        let mut h = Map::new();
+        let mut h = HashMap::new();
 
         for k in &ks {
             h = h.insert(k, k);
