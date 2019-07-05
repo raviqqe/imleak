@@ -2,9 +2,10 @@ version: 2
 jobs:
   build:
     docker:
-      - image: rustlang/rust:nightly
+      - image: rust
     steps:
       - checkout
+      - run: rustup default nightly-2019-07-02
       - run: rustup component add clippy rustfmt
       - run: cargo build
       - run: cargo fmt -- --check
