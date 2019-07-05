@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::hash::Hash;
 use std::sync::Arc;
 
@@ -21,9 +22,12 @@ impl<K, V> Bucket<K, V> {
 }
 
 impl<K: PartialEq, V> Bucket<K, V> {
-    fn find_index(&self, k: &K) -> Option<usize> {
-        for (i, &(ref kk, _)) in self.0.iter().enumerate() {
-            if *k == *kk {
+    fn find_index<Q: ?Sized + PartialEq>(&self, k: &Q) -> Option<usize>
+    where
+        K: Borrow<Q>,
+    {
+        for (i, (kk, _)) in self.0.iter().enumerate() {
+            if kk.borrow() == k {
                 return Some(i);
             }
         }
@@ -48,7 +52,10 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
         }
     }
 
-    fn remove(&self, k: &K) -> Option<Self> {
+    fn remove<Q: ?Sized + PartialEq>(&self, k: &Q) -> Option<Self>
+    where
+        K: Borrow<Q>,
+    {
         self.find_index(k).map(|i| {
             let mut v = (*self.0).clone();
             v.remove(i);
@@ -56,7 +63,10 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
         })
     }
 
-    fn get(&self, k: &K) -> Option<&V> {
+    fn get<Q: ?Sized + PartialEq>(&self, k: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+    {
         self.find_index(k).map(|i| &self.0[i].1)
     }
 

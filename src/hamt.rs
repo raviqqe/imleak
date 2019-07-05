@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -37,7 +38,10 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HAMT<K, V> {
         }
     }
 
-    fn entry_index(&self, k: &K) -> usize {
+    fn entry_index<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> usize
+    where
+        K: Borrow<Q>,
+    {
         ((hash(k) >> (self.level * 5)) & 0b11111) as usize
     }
 
@@ -109,15 +113,18 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
         }
     }
 
-    fn remove(&self, k: &K) -> Option<Self> {
+    fn remove<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<Self>
+    where
+        K: Borrow<Q>,
+    {
         let i = self.entry_index(k);
 
         Some(self.set_entry(
             i,
-            match self.entries[i] {
+            match &self.entries[i] {
                 Entry::Empty => return None,
-                Entry::KeyValue(ref kk, _) => {
-                    if *kk == *k {
+                Entry::KeyValue(kk, _) => {
+                    if kk.borrow() == k {
                         Entry::Empty
                     } else {
                         return None;
@@ -135,11 +142,14 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
         ))
     }
 
-    fn get(&self, k: &K) -> Option<&V> {
-        match self.entries[self.entry_index(k)] {
+    fn get<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+    {
+        match &self.entries[self.entry_index(k)] {
             Entry::Empty => None,
-            Entry::KeyValue(ref kk, ref vv) => {
-                if *kk == *k {
+            Entry::KeyValue(kk, vv) => {
+                if kk.borrow() == k {
                     Some(vv)
                 } else {
                     None
@@ -210,7 +220,7 @@ fn node_to_entry<K: Clone + Hash + PartialEq, V: Clone, N: Clone + Node<K, V>>(
     }
 }
 
-fn hash<K: Hash>(k: &K) -> u64 {
+fn hash<K: ?Sized + Hash>(k: &K) -> u64 {
     let mut h = DefaultHasher::new();
     k.hash(&mut h);
     h.finish()
