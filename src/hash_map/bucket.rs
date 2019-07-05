@@ -11,7 +11,7 @@ pub struct Bucket<K, V>(Arc<Vec<(K, V)>>);
 
 impl<K, V> Bucket<K, V> {
     pub fn new(k: K, v: V) -> Self {
-        Bucket(Arc::new(vec![(k, v)]))
+        Self(Arc::new(vec![(k, v)]))
     }
 }
 
@@ -43,11 +43,11 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
         match self.find_index(&k) {
             Some(i) => {
                 kvs[i] = (k, v);
-                (Bucket(Arc::new(kvs)), false)
+                (Self(Arc::new(kvs)), false)
             }
             None => {
                 kvs.push((k, v));
-                (Bucket(Arc::new(kvs)), true)
+                (Self(Arc::new(kvs)), true)
             }
         }
     }
@@ -59,7 +59,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
         self.find_index(k).map(|i| {
             let mut v = (*self.0).clone();
             v.remove(i);
-            Bucket(Arc::new(v))
+            Self(Arc::new(v))
         })
     }
 
@@ -77,7 +77,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
 
         let mut kvs = (*self.0).clone();
         kvs.remove(0);
-        Some((&self.0[0].0, &self.0[0].1, Bucket(Arc::new(kvs))))
+        Some((&self.0[0].0, &self.0[0].1, Self(Arc::new(kvs))))
     }
 
     fn is_singleton(&self) -> bool {

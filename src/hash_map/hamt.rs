@@ -32,7 +32,7 @@ pub struct HAMT<K, V> {
 
 impl<K: Clone + Hash + PartialEq, V: Clone> HAMT<K, V> {
     pub fn new(l: u8) -> Self {
-        HAMT {
+        Self {
             level: l,
             entries: Default::default(),
         }
@@ -89,7 +89,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
                         i,
                         if self.level < MAX_LEVEL {
                             Entry::HAMT(Arc::new(
-                                HAMT::new(self.level + 1)
+                                Self::new(self.level + 1)
                                     .insert(kk.clone(), vv.clone())
                                     .0
                                     .insert(k, v)

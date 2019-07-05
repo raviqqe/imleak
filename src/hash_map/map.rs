@@ -12,7 +12,7 @@ pub struct Map<K, V> {
 
 impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
     pub fn new() -> Self {
-        Map {
+        Self {
             size: 0,
             hamt: HAMT::new(0),
         }
@@ -21,7 +21,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
     pub fn insert(&self, k: K, v: V) -> Self {
         let (h, b) = self.hamt.insert(k, v);
 
-        Map {
+        Self {
             size: self.size + (b as usize),
             hamt: h,
         }
@@ -31,7 +31,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
     where
         K: Borrow<Q>,
     {
-        self.hamt.remove(k).map(|h| Map {
+        self.hamt.remove(k).map(|h| Self {
             size: self.size - 1,
             hamt: h,
         })
@@ -49,7 +49,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
             (
                 k,
                 v,
-                Map {
+                Self {
                     size: self.size - 1,
                     hamt: h,
                 },
