@@ -51,7 +51,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for Bucket<K, V> {
         }
     }
 
-    fn delete(&self, k: &K) -> Option<Self> {
+    fn remove(&self, k: &K) -> Option<Self> {
         self.find_index(k).map(|i| {
             let mut v = (*self.0).clone();
             v.remove(i);
@@ -59,7 +59,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for Bucket<K, V> {
         })
     }
 
-    fn find(&self, k: &K) -> Option<&V> {
+    fn get(&self, k: &K) -> Option<&V> {
         self.find_index(k).map(|i| &self.0[i].1)
     }
 
@@ -108,16 +108,16 @@ mod test {
     fn delete() {
         let b = Bucket::new(42, 0);
 
-        assert_eq!(b.delete(&42).unwrap().size(), 0);
-        assert_eq!(b.insert(0, 0).0.delete(&42).unwrap(), Bucket::new(0, 0));
+        assert_eq!(b.remove(&42).unwrap().size(), 0);
+        assert_eq!(b.insert(0, 0).0.remove(&42).unwrap(), Bucket::new(0, 0));
     }
 
     #[test]
     fn find() {
         let b = Bucket::new(42, 0);
 
-        assert_eq!(b.find(&42), Some(&0));
-        assert_eq!(b.find(&0), None);
+        assert_eq!(b.get(&42), Some(&0));
+        assert_eq!(b.get(&0), None);
     }
 
     #[test]
@@ -126,8 +126,8 @@ mod test {
 
         assert_eq!(b.first_rest(), Some((&42, &0, Bucket::new(0, 0))));
         assert_eq!(
-            b.delete(&0).unwrap().first_rest(),
-            Some((&42, &0, b.delete(&0).unwrap().delete(&42).unwrap()))
+            b.remove(&0).unwrap().first_rest(),
+            Some((&42, &0, b.remove(&0).unwrap().remove(&42).unwrap()))
         );
     }
 
@@ -135,7 +135,7 @@ mod test {
     fn is_singleton() {
         let b = Bucket::new(42, 0);
 
-        assert!(!b.delete(&42).unwrap().is_singleton());
+        assert!(!b.remove(&42).unwrap().is_singleton());
         assert!(b.is_singleton());
         assert!(!b.insert(0, 0).0.is_singleton());
     }

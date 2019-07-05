@@ -112,7 +112,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for HAMT<K, V> {
         }
     }
 
-    fn delete(&self, k: &K) -> Option<Self> {
+    fn remove(&self, k: &K) -> Option<Self> {
         let i = self.entry_index(k);
 
         Some(self.set_entry(
@@ -126,11 +126,11 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for HAMT<K, V> {
                         return None;
                     }
                 }
-                Entry::HAMT(ref h) => match h.delete(k) {
+                Entry::HAMT(ref h) => match h.remove(k) {
                     None => return None,
                     Some(h) => node_to_entry(&h, |h| Entry::HAMT(Arc::new(h))),
                 },
-                Entry::Bucket(ref b) => match b.delete(k) {
+                Entry::Bucket(ref b) => match b.remove(k) {
                     None => return None,
                     Some(b) => node_to_entry(&b, Entry::Bucket),
                 },
@@ -138,7 +138,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for HAMT<K, V> {
         ))
     }
 
-    fn find(&self, k: &K) -> Option<&V> {
+    fn get(&self, k: &K) -> Option<&V> {
         match self.entries[self.entry_index(k)] {
             Entry::Empty => None,
             Entry::KeyValue(ref kk, ref vv) => {
@@ -148,8 +148,8 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for HAMT<K, V> {
                     None
                 }
             }
-            Entry::HAMT(ref h) => h.find(k),
-            Entry::Bucket(ref b) => b.find(k),
+            Entry::HAMT(ref h) => h.get(k),
+            Entry::Bucket(ref b) => b.get(k),
         }
     }
 
@@ -157,7 +157,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for HAMT<K, V> {
         for (i, e) in self.entries.iter().enumerate() {
             match *e {
                 Entry::Empty => {}
-                Entry::KeyValue(ref k, ref v) => return Some((k, v, self.delete(k).unwrap())),
+                Entry::KeyValue(ref k, ref v) => return Some((k, v, self.remove(k).unwrap())),
                 Entry::HAMT(ref h) => {
                     let (k, v, r) = h.first_rest().unwrap();
                     return Some((
@@ -343,17 +343,17 @@ mod test {
     fn delete() {
         let h = HAMT::new(0);
 
-        assert_eq!(h.insert(0, 0).0.delete(&0), Some(h.clone()));
-        assert_eq!(h.insert(0, 0).0.delete(&1), None);
+        assert_eq!(h.insert(0, 0).0.remove(&0), Some(h.clone()));
+        assert_eq!(h.insert(0, 0).0.remove(&1), None);
         assert_eq!(
-            h.insert(0, 0).0.insert(1, 0).0.delete(&0),
+            h.insert(0, 0).0.insert(1, 0).0.remove(&0),
             Some(h.insert(1, 0).0)
         );
         assert_eq!(
-            h.insert(0, 0).0.insert(1, 0).0.delete(&1),
+            h.insert(0, 0).0.insert(1, 0).0.remove(&1),
             Some(h.insert(0, 0).0)
         );
-        assert_eq!(h.insert(0, 0).0.insert(1, 0).0.delete(&2), None);
+        assert_eq!(h.insert(0, 0).0.insert(1, 0).0.remove(&2), None);
     }
 
     #[test]
@@ -363,18 +363,18 @@ mod test {
         for _ in 0..NUM_ITERATIONS {
             let k = random();
             let s = h.size();
-            let found = h.find(&k).is_some();
+            let found = h.get(&k).is_some();
 
             if random() {
                 h = h.insert(k, k).0;
 
                 assert_eq!(h.size(), if found { s } else { s + 1 });
-                assert_eq!(h.find(&k), Some(&k));
+                assert_eq!(h.get(&k), Some(&k));
             } else {
-                h = h.delete(&k).unwrap_or(h);
+                h = h.remove(&k).unwrap_or(h);
 
                 assert_eq!(h.size(), if found { s - 1 } else { s });
-                assert_eq!(h.find(&k), None);
+                assert_eq!(h.get(&k), None);
             }
 
             assert!(h.is_normal());
@@ -382,16 +382,16 @@ mod test {
     }
 
     #[test]
-    fn find() {
+    fn get() {
         let h = HAMT::new(0);
 
-        assert_eq!(h.insert(0, 0).0.find(&0), Some(&0));
-        assert_eq!(h.insert(0, 0).0.find(&1), None);
-        assert_eq!(h.insert(1, 0).0.find(&0), None);
-        assert_eq!(h.insert(1, 0).0.find(&1), Some(&0));
-        assert_eq!(h.insert(0, 0).0.insert(1, 0).0.find(&0), Some(&0));
-        assert_eq!(h.insert(0, 0).0.insert(1, 0).0.find(&1), Some(&0));
-        assert_eq!(h.insert(0, 0).0.insert(1, 0).0.find(&2), None);
+        assert_eq!(h.insert(0, 0).0.get(&0), Some(&0));
+        assert_eq!(h.insert(0, 0).0.get(&1), None);
+        assert_eq!(h.insert(1, 0).0.get(&0), None);
+        assert_eq!(h.insert(1, 0).0.get(&1), Some(&0));
+        assert_eq!(h.insert(0, 0).0.insert(1, 0).0.get(&0), Some(&0));
+        assert_eq!(h.insert(0, 0).0.insert(1, 0).0.get(&1), Some(&0));
+        assert_eq!(h.insert(0, 0).0.insert(1, 0).0.get(&2), None);
     }
 
     #[test]
@@ -412,7 +412,7 @@ mod test {
                 let (k, _, r) = h.first_rest().unwrap();
 
                 assert_eq!(r.size(), h.size() - 1);
-                assert_eq!(r.find(k), None);
+                assert_eq!(r.get(k), None);
 
                 new = r;
             }
@@ -450,7 +450,7 @@ mod test {
                 }
 
                 for d in &ds {
-                    *h = h.delete(&d).unwrap_or(h.clone());
+                    *h = h.remove(&d).unwrap_or(h.clone());
                 }
             }
 
@@ -534,7 +534,7 @@ mod test {
     }
 
     #[bench]
-    fn bench_find_1000(b: &mut Bencher) {
+    fn bench_get_1000(b: &mut Bencher) {
         let ks = keys();
         let mut h = HAMT::new(0);
 
@@ -544,7 +544,7 @@ mod test {
 
         b.iter(|| {
             for k in &ks {
-                h.find(&k);
+                h.get(&k);
             }
         });
     }
@@ -563,7 +563,7 @@ mod test {
     }
 
     #[bench]
-    fn bench_hash_map_find_1000(b: &mut Bencher) {
+    fn bench_hash_map_get_1000(b: &mut Bencher) {
         let ks = keys();
         let mut h = HashMap::new();
 

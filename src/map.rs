@@ -27,14 +27,14 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Map<K, V> {
     }
 
     pub fn delete(&self, k: &K) -> Option<Self> {
-        self.hamt.delete(k).map(|h| Map {
+        self.hamt.remove(k).map(|h| Map {
             size: self.size - 1,
             hamt: h,
         })
     }
 
-    pub fn find(&self, k: &K) -> Option<&V> {
-        self.hamt.find(k)
+    pub fn get(&self, k: &K) -> Option<&V> {
+        self.hamt.get(k)
     }
 
     pub fn first_rest(&self) -> Option<(&K, &V, Self)> {
@@ -143,33 +143,33 @@ mod test {
         for _ in 0..NUM_ITERATIONS {
             let k = random();
             let s = h.size();
-            let found = h.find(&k).is_some();
+            let found = h.get(&k).is_some();
 
             if random() {
                 h = h.insert(k, k);
 
                 assert_eq!(h.size(), if found { s } else { s + 1 });
-                assert_eq!(h.find(&k), Some(&k));
+                assert_eq!(h.get(&k), Some(&k));
             } else {
                 h = h.delete(&k).unwrap_or(h);
 
                 assert_eq!(h.size(), if found { s - 1 } else { s });
-                assert_eq!(h.find(&k), None);
+                assert_eq!(h.get(&k), None);
             }
         }
     }
 
     #[test]
-    fn find() {
+    fn get() {
         let h = Map::new();
 
-        assert_eq!(h.insert(0, 0).find(&0), Some(&0));
-        assert_eq!(h.insert(0, 0).find(&1), None);
-        assert_eq!(h.insert(1, 0).find(&0), None);
-        assert_eq!(h.insert(1, 0).find(&1), Some(&0));
-        assert_eq!(h.insert(0, 0).insert(1, 0).find(&0), Some(&0));
-        assert_eq!(h.insert(0, 0).insert(1, 0).find(&1), Some(&0));
-        assert_eq!(h.insert(0, 0).insert(1, 0).find(&2), None);
+        assert_eq!(h.insert(0, 0).get(&0), Some(&0));
+        assert_eq!(h.insert(0, 0).get(&1), None);
+        assert_eq!(h.insert(1, 0).get(&0), None);
+        assert_eq!(h.insert(1, 0).get(&1), Some(&0));
+        assert_eq!(h.insert(0, 0).insert(1, 0).get(&0), Some(&0));
+        assert_eq!(h.insert(0, 0).insert(1, 0).get(&1), Some(&0));
+        assert_eq!(h.insert(0, 0).insert(1, 0).get(&2), None);
     }
 
     #[test]
@@ -187,7 +187,7 @@ mod test {
                 let (f, _, r) = h.first_rest().unwrap();
 
                 assert_eq!(r.size(), h.size() - 1);
-                assert_eq!(r.find(f), None);
+                assert_eq!(r.get(f), None);
 
                 new = r;
             }
@@ -248,7 +248,7 @@ mod test {
     }
 
     #[bench]
-    fn bench_find_1000(b: &mut Bencher) {
+    fn bench_get_1000(b: &mut Bencher) {
         let ks = keys();
         let mut h = Map::new();
 
@@ -258,7 +258,7 @@ mod test {
 
         b.iter(|| {
             for k in &ks {
-                h.find(&k);
+                h.get(&k);
             }
         });
     }
