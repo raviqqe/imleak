@@ -14,7 +14,7 @@ enum Entry<K, V> {
     Empty,
     KeyValue(K, V),
     HAMT(Arc<HAMT<K, V>>),
-    Bucket(Bucket<K, V>),
+    Bucket(Arc<Bucket<K, V>>),
 }
 
 impl<K, V> Default for Entry<K, V> {
@@ -96,7 +96,9 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
                                     .0,
                             ))
                         } else {
-                            Entry::Bucket(Bucket::new(kk.clone(), vv.clone()).insert(k, v).0)
+                            Entry::Bucket(Arc::new(
+                                Bucket::new(kk.clone(), vv.clone()).insert(k, v).0,
+                            ))
                         },
                     ),
                     true,
@@ -108,7 +110,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
             }
             Entry::Bucket(b) => {
                 let (b, new) = b.insert(k, v);
-                (self.set_entry(i, Entry::Bucket(b)), new)
+                (self.set_entry(i, Entry::Bucket(Arc::new(b))), new)
             }
         }
     }
@@ -136,7 +138,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
                 },
                 Entry::Bucket(b) => match b.remove(k) {
                     None => return None,
-                    Some(b) => node_to_entry(&b, Entry::Bucket),
+                    Some(b) => node_to_entry(&b, |b| Entry::Bucket(Arc::new(b))),
                 },
             },
         ))
@@ -175,7 +177,11 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
                 }
                 Entry::Bucket(b) => {
                     let (k, v, r) = b.first_rest().unwrap();
-                    return Some((k, v, self.set_entry(i, node_to_entry(&r, Entry::Bucket))));
+                    return Some((
+                        k,
+                        v,
+                        self.set_entry(i, node_to_entry(&r, |b| Entry::Bucket(Arc::new(b)))),
+                    ));
                 }
             }
         }

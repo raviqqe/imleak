@@ -1,17 +1,15 @@
 use std::borrow::Borrow;
 use std::hash::Hash;
-use std::sync::Arc;
 
 use super::node::Node;
 
 // TODO: Fix Eq and PartialEq impl.
-// TODO: Unwrap Arc.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct Bucket<K, V>(Arc<Vec<(K, V)>>);
+pub struct Bucket<K, V>(Vec<(K, V)>);
 
 impl<K, V> Bucket<K, V> {
     pub fn new(k: K, v: V) -> Self {
-        Self(Arc::new(vec![(k, v)]))
+        Self(vec![(k, v)])
     }
 }
 
@@ -38,16 +36,16 @@ impl<K: PartialEq, V> Bucket<K, V> {
 
 impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
     fn insert(&self, k: K, v: V) -> (Self, bool) {
-        let mut kvs = (*self.0).clone();
+        let mut kvs = self.0.clone();
 
         match self.find_index(&k) {
             Some(i) => {
                 kvs[i] = (k, v);
-                (Self(Arc::new(kvs)), false)
+                (Self(kvs), false)
             }
             None => {
                 kvs.push((k, v));
-                (Self(Arc::new(kvs)), true)
+                (Self(kvs), true)
             }
         }
     }
@@ -57,9 +55,9 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
         K: Borrow<Q>,
     {
         self.find_index(k).map(|i| {
-            let mut v = (*self.0).clone();
+            let mut v = self.0.clone();
             v.remove(i);
-            Self(Arc::new(v))
+            Self(v)
         })
     }
 
@@ -75,9 +73,9 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
             return None;
         }
 
-        let mut kvs = (*self.0).clone();
+        let mut kvs = self.0.clone();
         kvs.remove(0);
-        Some((&self.0[0].0, &self.0[0].1, Self(Arc::new(kvs))))
+        Some((&self.0[0].0, &self.0[0].1, Self(kvs)))
     }
 
     fn is_singleton(&self) -> bool {
