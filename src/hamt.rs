@@ -69,10 +69,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HAMT<K, V> {
     }
 }
 
-impl<K: Clone + Hash + PartialEq, V: Clone> Node for HAMT<K, V> {
-    type Key = K;
-    type Value = V;
-
+impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
     fn insert(&self, k: K, v: V) -> (Self, bool) {
         let i = self.entry_index(&k);
 
@@ -201,14 +198,10 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node for HAMT<K, V> {
     }
 }
 
-fn node_to_entry<N: Clone + Node>(
+fn node_to_entry<K: Clone + Hash + PartialEq, V: Clone, N: Clone + Node<K, V>>(
     n: &N,
-    f: fn(N) -> Entry<N::Key, N::Value>,
-) -> Entry<N::Key, N::Value>
-where
-    N::Key: Clone,
-    N::Value: Clone,
-{
+    f: fn(N) -> Entry<K, V>,
+) -> Entry<K, V> {
     if n.is_singleton() {
         let (k, v, _) = n.first_rest().unwrap();
         Entry::KeyValue(k.clone(), v.clone())
