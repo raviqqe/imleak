@@ -1,5 +1,6 @@
 use std::borrow::Borrow;
 use std::hash::Hash;
+use std::sync::Arc;
 
 use super::hamt::{HAMTIterator, HAMT};
 use super::node::Node;
@@ -7,14 +8,14 @@ use super::node::Node;
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct HashMap<K, V> {
     size: usize,
-    hamt: HAMT<K, V>,
+    hamt: Arc<HAMT<K, V>>,
 }
 
 impl<K: Clone + Hash + PartialEq, V: Clone> HashMap<K, V> {
     pub fn new() -> Self {
         Self {
             size: 0,
-            hamt: HAMT::new(0),
+            hamt: HAMT::new(0).into(),
         }
     }
 
@@ -23,7 +24,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashMap<K, V> {
 
         Self {
             size: self.size + (b as usize),
-            hamt: h,
+            hamt: h.into(),
         }
     }
 
@@ -33,7 +34,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashMap<K, V> {
     {
         self.hamt.remove(k).map(|h| Self {
             size: self.size - 1,
-            hamt: h,
+            hamt: h.into(),
         })
     }
 
@@ -51,7 +52,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashMap<K, V> {
                 v,
                 Self {
                     size: self.size - 1,
-                    hamt: h,
+                    hamt: h.into(),
                 },
             )
         })
