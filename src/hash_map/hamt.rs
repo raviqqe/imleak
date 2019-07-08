@@ -88,17 +88,16 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
                     self.set_entry(
                         i,
                         if self.level < MAX_LEVEL {
-                            Entry::HAMT(Arc::new(
+                            Entry::HAMT(
                                 Self::new(self.level + 1)
                                     .insert(kk.clone(), vv.clone())
                                     .0
                                     .insert(k, v)
-                                    .0,
-                            ))
+                                    .0
+                                    .into(),
+                            )
                         } else {
-                            Entry::Bucket(Arc::new(
-                                Bucket::new(kk.clone(), vv.clone()).insert(k, v).0,
-                            ))
+                            Entry::Bucket(Bucket::new(kk.clone(), vv.clone()).insert(k, v).0.into())
                         },
                     ),
                     true,
@@ -106,11 +105,11 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
             }
             Entry::HAMT(h) => {
                 let (h, new) = h.insert(k, v);
-                (self.set_entry(i, Entry::HAMT(Arc::new(h))), new)
+                (self.set_entry(i, Entry::HAMT(h.into())), new)
             }
             Entry::Bucket(b) => {
                 let (b, new) = b.insert(k, v);
-                (self.set_entry(i, Entry::Bucket(Arc::new(b))), new)
+                (self.set_entry(i, Entry::Bucket(b.into())), new)
             }
         }
     }
@@ -134,11 +133,11 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
                 }
                 Entry::HAMT(h) => match h.remove(k) {
                     None => return None,
-                    Some(h) => node_to_entry(&h, |h| Entry::HAMT(Arc::new(h))),
+                    Some(h) => node_to_entry(&h, |h| Entry::HAMT(h.into())),
                 },
                 Entry::Bucket(b) => match b.remove(k) {
                     None => return None,
-                    Some(b) => node_to_entry(&b, |b| Entry::Bucket(Arc::new(b))),
+                    Some(b) => node_to_entry(&b, |b| Entry::Bucket(b.into())),
                 },
             },
         ))
@@ -172,7 +171,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
                     return Some((
                         k,
                         v,
-                        self.set_entry(i, node_to_entry(&r, |h| Entry::HAMT(Arc::new(h)))),
+                        self.set_entry(i, node_to_entry(&r, |h| Entry::HAMT(h.into()))),
                     ));
                 }
                 Entry::Bucket(b) => {
@@ -180,7 +179,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
                     return Some((
                         k,
                         v,
-                        self.set_entry(i, node_to_entry(&r, |b| Entry::Bucket(Arc::new(b)))),
+                        self.set_entry(i, node_to_entry(&r, |b| Entry::Bucket(b.into()))),
                     ));
                 }
             }
