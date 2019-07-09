@@ -1,7 +1,6 @@
+use super::node::Node;
 use std::borrow::Borrow;
 use std::hash::Hash;
-
-use super::node::Node;
 
 // TODO: Fix Eq and PartialEq impl.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -68,22 +67,39 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
         self.find_index(k).map(|i| &self.0[i].1)
     }
 
-    fn first_rest(&self) -> Option<(&K, &V, Self)> {
-        if self.0.is_empty() {
-            return None;
-        }
-
-        let mut kvs = self.0.clone();
-        kvs.remove(0);
-        Some((&self.0[0].0, &self.0[0].1, Self(kvs)))
-    }
-
-    fn is_singleton(&self) -> bool {
-        self.size() == 1
-    }
-
     fn size(&self) -> usize {
         self.0.len()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct BucketIterator<'a, K, V> {
+    bucket: &'a Bucket<K, V>,
+    index: usize,
+}
+
+impl<'a, K, V> BucketIterator<'a, K, V> {
+    pub fn new(bucket: &'a Bucket<K, V>) -> Self {
+        Self { bucket, index: 0 }
+    }
+}
+
+impl<'a, K, V> Iterator for BucketIterator<'a, K, V> {
+    type Item = (&'a K, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = self.bucket.0.get(self.index);
+        self.index += 1;
+        item.map(|(k, v)| (k, v))
+    }
+}
+
+impl<'a, K, V> IntoIterator for &'a Bucket<K, V> {
+    type IntoIter = BucketIterator<'a, K, V>;
+    type Item = (&'a K, &'a V);
+
+    fn into_iter(self) -> Self::IntoIter {
+        BucketIterator::new(self)
     }
 }
 
@@ -123,25 +139,5 @@ mod test {
 
         assert_eq!(b.get(&42), Some(&0));
         assert_eq!(b.get(&0), None);
-    }
-
-    #[test]
-    fn first_rest() {
-        let b = Bucket::new(42, 0).insert(0, 0).0;
-
-        assert_eq!(b.first_rest(), Some((&42, &0, Bucket::new(0, 0))));
-        assert_eq!(
-            b.remove(&0).unwrap().first_rest(),
-            Some((&42, &0, b.remove(&0).unwrap().remove(&42).unwrap()))
-        );
-    }
-
-    #[test]
-    fn is_singleton() {
-        let b = Bucket::new(42, 0);
-
-        assert!(!b.remove(&42).unwrap().is_singleton());
-        assert!(b.is_singleton());
-        assert!(!b.insert(0, 0).0.is_singleton());
     }
 }

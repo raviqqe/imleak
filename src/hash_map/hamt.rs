@@ -66,8 +66,8 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HAMT<K, V> {
     #[cfg(test)]
     fn is_normal(&self) -> bool {
         self.entries.iter().all(|e| match e {
-            Entry::Bucket(b) => !b.is_singleton(),
-            Entry::HAMT(h) => h.is_normal() && !h.is_singleton(),
+            Entry::Bucket(b) => b.size() != 1,
+            Entry::HAMT(h) => h.is_normal() && h.size() != 1,
             _ => true,
         })
     }
@@ -161,45 +161,6 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
         }
     }
 
-    fn first_rest(&self) -> Option<(&K, &V, Self)> {
-        for (i, e) in self.entries.iter().enumerate() {
-            match e {
-                Entry::Empty => {}
-                Entry::KeyValue(k, v) => return Some((k, v, self.remove(k).unwrap())),
-                Entry::HAMT(h) => {
-                    let (k, v, r) = h.first_rest().unwrap();
-                    return Some((
-                        k,
-                        v,
-                        self.set_entry(i, node_to_entry(&r, |h| Entry::HAMT(h.into()))),
-                    ));
-                }
-                Entry::Bucket(b) => {
-                    let (k, v, r) = b.first_rest().unwrap();
-                    return Some((
-                        k,
-                        v,
-                        self.set_entry(i, node_to_entry(&r, |b| Entry::Bucket(b.into()))),
-                    ));
-                }
-            }
-        }
-
-        None
-    }
-
-    fn is_singleton(&self) -> bool {
-        self.entries
-            .iter()
-            .map(|e| match *e {
-                Entry::Empty => 0,
-                Entry::KeyValue(_, _) => 1,
-                _ => 2,
-            })
-            .sum::<usize>()
-            == 1
-    }
-
     fn size(&self) -> usize {
         self.entries
             .iter()
@@ -213,13 +174,18 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
     }
 }
 
-fn node_to_entry<K: Clone + Hash + PartialEq, V: Clone, N: Clone + Node<K, V>>(
-    n: &N,
+fn node_to_entry<'a, K: 'a + Clone + Hash + PartialEq, V: 'a + Clone, N: Clone + Node<K, V>>(
+    n: &'a N,
     f: fn(N) -> Entry<K, V>,
-) -> Entry<K, V> {
-    if n.is_singleton() {
-        let (k, v, _) = n.first_rest().unwrap();
-        Entry::KeyValue(k.clone(), v.clone())
+) -> Entry<K, V>
+where
+    &'a N: IntoIterator<Item = (&'a K, &'a V)>,
+{
+    if n.size() == 1 {
+        n.into_iter()
+            .next()
+            .map(|(k, v)| Entry::KeyValue(k.clone(), v.clone()))
+            .expect("non-empty node")
     } else {
         f(n.clone())
     }
@@ -401,46 +367,6 @@ mod test {
         assert_eq!(h.insert(0, 0).0.insert(1, 0).0.get(&0), Some(&0));
         assert_eq!(h.insert(0, 0).0.insert(1, 0).0.get(&1), Some(&0));
         assert_eq!(h.insert(0, 0).0.insert(1, 0).0.get(&2), None);
-    }
-
-    #[test]
-    fn first_rest() {
-        let mut h: HAMT<i16, i16> = HAMT::new(0);
-
-        for _ in 0..NUM_ITERATIONS {
-            let k = random();
-            h = h.insert(k, k).0;
-
-            assert!(h.is_normal());
-        }
-
-        for _ in 0..h.size() {
-            let new: HAMT<i16, i16>;
-
-            {
-                let (k, _, r) = h.first_rest().unwrap();
-
-                assert_eq!(r.size(), h.size() - 1);
-                assert_eq!(r.get(k), None);
-
-                new = r;
-            }
-
-            h = new;
-
-            assert!(h.is_normal());
-        }
-
-        assert_eq!(h, HAMT::new(0));
-    }
-
-    #[test]
-    fn is_singleton() {
-        let h = HAMT::new(0);
-
-        assert!(!h.is_singleton());
-        assert!(h.insert(0, 0).0.is_singleton());
-        assert!(!h.insert(0, 0).0.insert(1, 0).0.is_singleton());
     }
 
     #[test]

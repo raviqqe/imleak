@@ -13,7 +13,5 @@ where
     fn get<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<&V>
     where
         K: Borrow<Q>;
-    fn first_rest(&self) -> Option<(&K, &V, Self)>;
-    fn is_singleton(&self) -> bool; // for normalization
-    fn size(&self) -> usize; // for debugging
+    fn size(&self) -> usize;
 }

@@ -45,19 +45,6 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashMap<K, V> {
         self.hamt.get(k)
     }
 
-    pub fn first_rest(&self) -> Option<(&K, &V, Self)> {
-        self.hamt.first_rest().map(|(k, v, h)| {
-            (
-                k,
-                v,
-                Self {
-                    size: self.size - 1,
-                    hamt: h.into(),
-                },
-            )
-        })
-    }
-
     pub fn size(&self) -> usize {
         self.size
     }
@@ -178,26 +165,6 @@ mod test {
         assert_eq!(h.insert(0, 0).insert(1, 0).get(&0), Some(&0));
         assert_eq!(h.insert(0, 0).insert(1, 0).get(&1), Some(&0));
         assert_eq!(h.insert(0, 0).insert(1, 0).get(&2), None);
-    }
-
-    #[test]
-    fn first_rest() {
-        let mut h: HashMap<i16, i16> = HashMap::new();
-
-        for _ in 0..NUM_ITERATIONS {
-            h = h.insert(random(), 0);
-        }
-
-        for _ in 0..h.size() {
-            let (k, _, r) = h.first_rest().unwrap();
-
-            assert_eq!(r.size(), h.size() - 1);
-            assert_eq!(r.get(k), None);
-
-            h = r;
-        }
-
-        assert_eq!(h, HashMap::new());
     }
 
     #[test]
