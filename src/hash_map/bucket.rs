@@ -17,8 +17,8 @@ impl<K, V> Bucket<K, V> {
 }
 
 impl<K, V> Bucket<K, V> {
-    pub fn to_vec(&self) -> &Vec<(K, V)> {
-        &self.vector
+    pub fn size(&self) -> usize {
+        self.vector.len()
     }
 }
 

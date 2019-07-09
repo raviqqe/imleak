@@ -1,10 +1,9 @@
+use super::bucket::{Bucket, BucketIterator};
+use super::node::Node;
 use std::borrow::Borrow;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
-
-use super::bucket::Bucket;
-use super::node::Node;
 
 const MAX_LEVEL: u8 = 64 / 5;
 const NUM_ENTRIES: usize = 32;
@@ -197,21 +196,21 @@ fn hash<K: ?Sized + Hash>(k: &K) -> u64 {
     h.finish()
 }
 
-#[derive(Debug)]
-enum NodeRef<'a, K: 'a, V: 'a> {
-    HAMT(&'a HAMT<K, V>),
-    Bucket(&'a Bucket<K, V>),
+#[derive(Clone, Debug)]
+pub struct HAMTIterator<'a, K: 'a, V: 'a> {
+    hamts: Vec<(&'a HAMT<K, V>, usize)>,
+    bucket_iterator: Option<BucketIterator<'a, K, V>>,
 }
-
-#[derive(Debug)]
-pub struct HAMTIterator<'a, K: 'a, V: 'a>(Vec<(NodeRef<'a, K, V>, usize)>);
 
 impl<'a, K, V> IntoIterator for &'a HAMT<K, V> {
     type IntoIter = HAMTIterator<'a, K, V>;
     type Item = (&'a K, &'a V);
 
     fn into_iter(self) -> Self::IntoIter {
-        HAMTIterator(vec![(NodeRef::HAMT(&self), 0)])
+        HAMTIterator {
+            hamts: vec![(self, 0)],
+            bucket_iterator: None,
+        }
     }
 }
 
@@ -219,38 +218,32 @@ impl<'a, K, V> Iterator for HAMTIterator<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.pop().and_then(|t| match t {
-            (NodeRef::HAMT(h), i) => {
+        match &mut self.bucket_iterator {
+            Some(b) => b.next().or_else(|| {
+                self.bucket_iterator = None;
+                self.next()
+            }),
+            None => self.hamts.pop().and_then(|(h, i)| {
                 if i == NUM_ENTRIES {
-                    return self.next();
-                }
-
-                self.0.push((t.0, i + 1));
-
-                match &h.entries[i] {
-                    Entry::Empty => self.next(),
-                    Entry::HAMT(h) => {
-                        self.0.push((NodeRef::HAMT(h), 0));
-                        self.next()
-                    }
-                    Entry::KeyValue(k, v) => Some((k, v)),
-                    Entry::Bucket(b) => {
-                        self.0.push((NodeRef::Bucket(b), 0));
-                        self.next()
-                    }
-                }
-            }
-            (NodeRef::Bucket(b), i) => {
-                if i == b.to_vec().len() {
                     self.next()
                 } else {
-                    self.0.push((t.0, i + 1));
+                    self.hamts.push((h, i + 1));
 
-                    let (k, v) = &b.to_vec()[i];
-                    Some((k, v))
+                    match &h.entries[i] {
+                        Entry::Empty => self.next(),
+                        Entry::HAMT(h) => {
+                            self.hamts.push((h, 0));
+                            self.next()
+                        }
+                        Entry::KeyValue(k, v) => Some((k, v)),
+                        Entry::Bucket(b) => {
+                            self.bucket_iterator = b.into_iter().into();
+                            self.next()
+                        }
+                    }
                 }
-            }
-        })
+            }),
+        }
     }
 }
 
@@ -449,6 +442,19 @@ mod test {
                 assert_eq!(s, h.size());
             }
         }
+    }
+
+    #[test]
+    fn iterate_with_buckets() {
+        let ks = (0..1000).collect::<Vec<_>>();
+
+        let mut h = HAMT::new(MAX_LEVEL);
+
+        for k in &ks {
+            h = h.insert(k, k).0;
+        }
+
+        assert_eq!(ks.len(), h.into_iter().collect::<Vec<_>>().len())
     }
 
     fn keys() -> Vec<i16> {
