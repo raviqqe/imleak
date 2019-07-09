@@ -4,17 +4,21 @@ use std::hash::Hash;
 
 // TODO: Fix Eq and PartialEq impl.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct Bucket<K, V>(Vec<(K, V)>);
+pub struct Bucket<K, V> {
+    vector: Vec<(K, V)>,
+}
 
 impl<K, V> Bucket<K, V> {
     pub fn new(k: K, v: V) -> Self {
-        Self(vec![(k, v)])
+        Self {
+            vector: vec![(k, v)],
+        }
     }
 }
 
 impl<K, V> Bucket<K, V> {
     pub fn to_vec(&self) -> &Vec<(K, V)> {
-        &self.0
+        &self.vector
     }
 }
 
@@ -23,7 +27,7 @@ impl<K: PartialEq, V> Bucket<K, V> {
     where
         K: Borrow<Q>,
     {
-        for (i, (kk, _)) in self.0.iter().enumerate() {
+        for (i, (kk, _)) in self.vector.iter().enumerate() {
             if kk.borrow() == k {
                 return Some(i);
             }
@@ -35,16 +39,16 @@ impl<K: PartialEq, V> Bucket<K, V> {
 
 impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
     fn insert(&self, k: K, v: V) -> (Self, bool) {
-        let mut kvs = self.0.clone();
+        let mut kvs = self.vector.clone();
 
         match self.find_index(&k) {
             Some(i) => {
                 kvs[i] = (k, v);
-                (Self(kvs), false)
+                (Self { vector: kvs }, false)
             }
             None => {
                 kvs.push((k, v));
-                (Self(kvs), true)
+                (Self { vector: kvs }, true)
             }
         }
     }
@@ -54,9 +58,9 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
         K: Borrow<Q>,
     {
         self.find_index(k).map(|i| {
-            let mut v = self.0.clone();
+            let mut v = self.vector.clone();
             v.remove(i);
-            Self(v)
+            Self { vector: v }
         })
     }
 
@@ -64,11 +68,11 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
     where
         K: Borrow<Q>,
     {
-        self.find_index(k).map(|i| &self.0[i].1)
+        self.find_index(k).map(|i| &self.vector[i].1)
     }
 
     fn size(&self) -> usize {
-        self.0.len()
+        self.vector.len()
     }
 }
 
@@ -88,7 +92,7 @@ impl<'a, K, V> Iterator for BucketIterator<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = self.bucket.0.get(self.index);
+        let item = self.bucket.vector.get(self.index);
         self.index += 1;
         item.map(|(k, v)| (k, v))
     }
