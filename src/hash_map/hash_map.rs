@@ -1,9 +1,8 @@
+use super::hamt::{HAMTIterator, HAMT};
+use super::node::Node;
 use std::borrow::Borrow;
 use std::hash::Hash;
 use std::sync::Arc;
-
-use super::hamt::{HAMTIterator, HAMT};
-use super::node::Node;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct HashMap<K, V> {
@@ -56,13 +55,15 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Default for HashMap<K, V> {
     }
 }
 
-pub struct HashMapIterator<'a, K: 'a, V: 'a>(HAMTIterator<'a, K, V>);
+pub struct HashMapIterator<'a, K: 'a, V: 'a> {
+    hamt_iterator: HAMTIterator<'a, K, V>,
+}
 
 impl<'a, K, V> Iterator for HashMapIterator<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
+        self.hamt_iterator.next()
     }
 }
 
@@ -71,7 +72,9 @@ impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
     type Item = (&'a K, &'a V);
 
     fn into_iter(self) -> Self::IntoIter {
-        HashMapIterator(self.hamt.into_iter())
+        HashMapIterator {
+            hamt_iterator: self.hamt.into_iter(),
+        }
     }
 }
 
