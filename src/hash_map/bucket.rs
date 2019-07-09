@@ -124,7 +124,7 @@ mod test {
     }
 
     #[test]
-    fn delete() {
+    fn remove() {
         let b = Bucket::new(42, 0);
 
         assert_eq!(b.remove(&42).unwrap().size(), 0);
@@ -132,7 +132,7 @@ mod test {
     }
 
     #[test]
-    fn find() {
+    fn get() {
         let b = Bucket::new(42, 0);
 
         assert_eq!(b.get(&42), Some(&0));

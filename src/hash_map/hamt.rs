@@ -308,7 +308,7 @@ mod test {
     }
 
     #[test]
-    fn delete() {
+    fn remove() {
         let h = HAMT::new(0);
 
         assert_eq!(h.insert(0, 0).0.remove(&0), Some(h.clone()));
