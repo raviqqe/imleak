@@ -80,28 +80,30 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
         match &self.entries[i] {
             Entry::Empty => (self.set_entry(i, Entry::KeyValue(k, v)), true),
             Entry::KeyValue(kk, vv) => {
-                if *kk == k {
-                    return (self.set_entry(i, Entry::KeyValue(k, v)), false);
+                if kk == &k {
+                    (self.set_entry(i, Entry::KeyValue(k, v)), false)
+                } else {
+                    (
+                        self.set_entry(
+                            i,
+                            if self.level < MAX_LEVEL {
+                                Entry::HAMT(
+                                    Self::new(self.level + 1)
+                                        .insert(kk.clone(), vv.clone())
+                                        .0
+                                        .insert(k, v)
+                                        .0
+                                        .into(),
+                                )
+                            } else {
+                                Entry::Bucket(
+                                    Bucket::new(kk.clone(), vv.clone()).insert(k, v).0.into(),
+                                )
+                            },
+                        ),
+                        true,
+                    )
                 }
-
-                (
-                    self.set_entry(
-                        i,
-                        if self.level < MAX_LEVEL {
-                            Entry::HAMT(
-                                Self::new(self.level + 1)
-                                    .insert(kk.clone(), vv.clone())
-                                    .0
-                                    .insert(k, v)
-                                    .0
-                                    .into(),
-                            )
-                        } else {
-                            Entry::Bucket(Bucket::new(kk.clone(), vv.clone()).insert(k, v).0.into())
-                        },
-                    ),
-                    true,
-                )
             }
             Entry::HAMT(h) => {
                 let (h, new) = h.insert(k, v);
