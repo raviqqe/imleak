@@ -5,9 +5,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-const HASH_BITS: usize = 5;
-const MAX_LEVEL: u8 = 64 / HASH_BITS as u8;
-const NUM_ENTRIES: usize = 2 ^ HASH_BITS;
+const MAX_LEVEL: u8 = 64 / 5;
+const NUM_ENTRIES: usize = 32;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 enum Entry<K, V> {
