@@ -129,7 +129,7 @@ mod test {
         let b = Bucket::new(42, 0);
 
         assert_eq!(b.remove(&42).unwrap().size(), 0);
-        assert_eq!(b.insert(0, 0).0.remove(&42).unwrap(), Bucket::new(0, 0));
+        assert_eq!(b.insert(0, 0).0.remove(&42), Some(Bucket::new(0, 0)));
     }
 
     #[test]
