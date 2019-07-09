@@ -55,14 +55,14 @@ impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HAMT<K, V> {
     }
 
     #[cfg(test)]
-    fn size(&self) -> usize {
+    fn len(&self) -> usize {
         self.entries
             .iter()
             .map(|e| match e {
                 Entry::Empty => 0,
                 Entry::KeyValue(_, _) => 1,
-                Entry::HAMT(h) => h.size(),
-                Entry::Bucket(b) => b.size(),
+                Entry::HAMT(h) => h.len(),
+                Entry::Bucket(b) => b.len(),
             })
             .sum()
     }
@@ -78,8 +78,8 @@ impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HAMT<K, V> {
     #[cfg(test)]
     fn is_normal(&self) -> bool {
         self.entries.iter().all(|e| match e {
-            Entry::Bucket(b) => b.size() != 1,
-            Entry::HAMT(h) => h.is_normal() && h.size() != 1,
+            Entry::Bucket(b) => b.len() != 1,
+            Entry::HAMT(h) => h.is_normal() && h.len() != 1,
             _ => true,
         })
     }
@@ -284,22 +284,22 @@ mod test {
     fn insert() {
         let h = HAMT::new(0);
 
-        assert_eq!(h.size(), 0);
+        assert_eq!(h.len(), 0);
 
         let (h, b) = h.insert(0, 0);
 
         assert!(b);
-        assert_eq!(h.size(), 1);
+        assert_eq!(h.len(), 1);
 
         let (hh, b) = h.insert(0, 0);
 
         assert!(!b);
-        assert_eq!(hh.size(), 1);
+        assert_eq!(hh.len(), 1);
 
         let (h, b) = h.insert(1, 0);
 
         assert!(b);
-        assert_eq!(h.size(), 2);
+        assert_eq!(h.len(), 2);
     }
 
     #[test]
@@ -310,7 +310,7 @@ mod test {
             let (hh, b) = h.insert(i, i);
             h = hh;
             assert!(b);
-            assert_eq!(h.size(), i + 1);
+            assert_eq!(h.len(), i + 1);
         }
     }
 
@@ -321,7 +321,7 @@ mod test {
         for i in 0..NUM_ITERATIONS {
             let k = random();
             h = h.insert(k, k).0;
-            assert_eq!(h.size(), i + 1);
+            assert_eq!(h.len(), i + 1);
         }
     }
 
@@ -348,18 +348,18 @@ mod test {
 
         for _ in 0..NUM_ITERATIONS {
             let k = random();
-            let s = h.size();
+            let s = h.len();
             let found = h.get(&k).is_some();
 
             if random() {
                 h = h.insert(k, k).0;
 
-                assert_eq!(h.size(), if found { s } else { s + 1 });
+                assert_eq!(h.len(), if found { s } else { s + 1 });
                 assert_eq!(h.get(&k), Some(&k));
             } else {
                 h = h.remove(&k).unwrap_or(h);
 
-                assert_eq!(h.size(), if found { s - 1 } else { s });
+                assert_eq!(h.len(), if found { s - 1 } else { s });
                 assert_eq!(h.get(&k), None);
             }
 
@@ -457,7 +457,7 @@ mod test {
                     assert_eq!(m[k], *v);
                 }
 
-                assert_eq!(s, h.size());
+                assert_eq!(s, h.len());
             }
         }
     }

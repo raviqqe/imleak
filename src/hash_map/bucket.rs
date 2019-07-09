@@ -19,7 +19,7 @@ impl<K: Eq + Hash, V: PartialEq> Bucket<K, V> {
 
 impl<K: Eq + Hash, V: PartialEq> Bucket<K, V> {
     #[cfg(test)]
-    pub fn size(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.hash_map.len()
     }
 }
@@ -91,20 +91,20 @@ mod test {
     fn insert() {
         let b = Bucket::new(42, 0);
 
-        assert_eq!(b.size(), 1);
+        assert_eq!(b.len(), 1);
 
         let (bb, new) = b.insert(0, 0);
 
         assert!(new);
-        assert_eq!(b.size(), 1);
-        assert_eq!(bb.size(), 2);
+        assert_eq!(b.len(), 1);
+        assert_eq!(bb.len(), 2);
     }
 
     #[test]
     fn remove() {
         let b = Bucket::new(42, 0);
 
-        assert_eq!(b.remove(&42).unwrap().size(), 0);
+        assert_eq!(b.remove(&42).unwrap().len(), 0);
         assert_eq!(b.insert(0, 0).0.remove(&42), Some(Bucket::new(0, 0)));
     }
 
