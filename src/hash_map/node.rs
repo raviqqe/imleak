@@ -5,7 +5,6 @@ pub trait Node<K: Hash + PartialEq, V>
 where
     Self: Sized,
 {
-    // TODO: Move out the removed value as Option<Value>.
     fn insert(&self, k: K, v: V) -> (Self, bool);
     fn remove<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<Self>
     where
