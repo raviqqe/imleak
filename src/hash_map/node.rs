@@ -6,10 +6,10 @@ where
     Self: Sized,
 {
     fn insert(&self, k: K, v: V) -> (Self, bool);
-    fn remove<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<Self>
+    fn remove<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<Self>
     where
         K: Borrow<Q>;
-    fn get<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<&V>
+    fn get<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<&V>
     where
         K: Borrow<Q>;
     fn is_singleton(&self) -> bool;

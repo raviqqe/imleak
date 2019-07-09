@@ -8,28 +8,28 @@ use std::sync::Arc;
 const MAX_LEVEL: u8 = 64 / 5;
 const NUM_ENTRIES: usize = 32;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-enum Entry<K, V> {
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum Entry<K: Eq + Hash, V: PartialEq> {
     Empty,
     KeyValue(K, V),
     HAMT(Arc<HAMT<K, V>>),
     Bucket(Arc<Bucket<K, V>>),
 }
 
-impl<K, V> Default for Entry<K, V> {
+impl<K: Eq + Hash, V: PartialEq> Default for Entry<K, V> {
     fn default() -> Self {
         Entry::Empty
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct HAMT<K, V> {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HAMT<K: Eq + Hash, V: PartialEq> {
     // TODO: Use bitmap.
     level: u8,
     entries: [Entry<K, V>; NUM_ENTRIES],
 }
 
-impl<K: Clone + Hash + PartialEq, V: Clone> HAMT<K, V> {
+impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HAMT<K, V> {
     pub fn new(l: u8) -> Self {
         Self {
             level: l,
@@ -85,7 +85,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HAMT<K, V> {
     }
 }
 
-impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
+impl<K: Clone + Eq + Hash, V: Clone + PartialEq> Node<K, V> for HAMT<K, V> {
     fn insert(&self, k: K, v: V) -> (Self, bool) {
         let i = self.entry_index(&k);
 
@@ -128,7 +128,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
         }
     }
 
-    fn remove<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<Self>
+    fn remove<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<Self>
     where
         K: Borrow<Q>,
     {
@@ -157,7 +157,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
         ))
     }
 
-    fn get<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<&V>
+    fn get<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<&V>
     where
         K: Borrow<Q>,
     {
@@ -191,7 +191,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
     }
 }
 
-fn node_to_entry<'a, K: 'a + Clone + Hash + PartialEq, V: 'a + Clone, N: Clone + Node<K, V>>(
+fn node_to_entry<'a, K: 'a + Clone + Eq + Hash, V: 'a + Clone + PartialEq, N: Clone + Node<K, V>>(
     n: &'a N,
     f: fn(N) -> Entry<K, V>,
 ) -> Entry<K, V>
@@ -215,12 +215,12 @@ fn hash<K: ?Sized + Hash>(k: &K) -> u64 {
 }
 
 #[derive(Clone, Debug)]
-pub struct HAMTIterator<'a, K: 'a, V: 'a> {
+pub struct HAMTIterator<'a, K: 'a + Eq + Hash, V: 'a + PartialEq> {
     hamts: Vec<(&'a HAMT<K, V>, usize)>,
     bucket_iterator: Option<BucketIterator<'a, K, V>>,
 }
 
-impl<'a, K, V> IntoIterator for &'a HAMT<K, V> {
+impl<'a, K: Eq + Hash, V: PartialEq> IntoIterator for &'a HAMT<K, V> {
     type IntoIter = HAMTIterator<'a, K, V>;
     type Item = (&'a K, &'a V);
 
@@ -232,7 +232,7 @@ impl<'a, K, V> IntoIterator for &'a HAMT<K, V> {
     }
 }
 
-impl<'a, K, V> Iterator for HAMTIterator<'a, K, V> {
+impl<'a, K: Eq + Hash, V: PartialEq> Iterator for HAMTIterator<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {

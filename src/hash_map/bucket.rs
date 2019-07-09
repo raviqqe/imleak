@@ -1,86 +1,62 @@
 use super::node::Node;
 use std::borrow::Borrow;
+use std::collections::hash_map::Iter;
+use std::collections::HashMap;
 use std::hash::Hash;
-use std::slice::Iter;
 
-// TODO: Fix Eq and PartialEq impl.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct Bucket<K, V> {
-    vector: Vec<(K, V)>,
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Bucket<K: Eq + Hash, V: PartialEq> {
+    hash_map: HashMap<K, V>,
 }
 
-impl<K, V> Bucket<K, V> {
+impl<K: Eq + Hash, V: PartialEq> Bucket<K, V> {
     pub fn new(k: K, v: V) -> Self {
         Self {
-            vector: vec![(k, v)],
+            hash_map: vec![(k, v)].into_iter().collect(),
         }
     }
 }
 
-impl<K, V> Bucket<K, V> {
+impl<K: Eq + Hash, V: PartialEq> Bucket<K, V> {
     #[cfg(test)]
     pub fn size(&self) -> usize {
-        self.vector.len()
+        self.hash_map.len()
     }
 }
 
-impl<K: PartialEq, V> Bucket<K, V> {
-    fn find_index<Q: ?Sized + PartialEq>(&self, k: &Q) -> Option<usize>
-    where
-        K: Borrow<Q>,
-    {
-        for (i, (kk, _)) in self.vector.iter().enumerate() {
-            if kk.borrow() == k {
-                return Some(i);
-            }
-        }
-
-        None
-    }
-}
-
-impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
+impl<K: Clone + Eq + Hash, V: Clone + PartialEq> Node<K, V> for Bucket<K, V> {
     fn insert(&self, k: K, v: V) -> (Self, bool) {
-        let mut kvs = self.vector.clone();
+        let mut h = self.hash_map.clone();
 
-        match self.find_index(&k) {
-            Some(i) => {
-                kvs[i] = (k, v);
-                (Self { vector: kvs }, false)
-            }
-            None => {
-                kvs.push((k, v));
-                (Self { vector: kvs }, true)
-            }
+        match h.insert(k, v) {
+            Some(_) => (Self { hash_map: h }, false),
+            None => (Self { hash_map: h }, true),
         }
     }
 
-    fn remove<Q: ?Sized + PartialEq>(&self, k: &Q) -> Option<Self>
+    fn remove<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<Self>
     where
         K: Borrow<Q>,
     {
-        self.find_index(k).map(|i| {
-            let mut v = self.vector.clone();
-            v.remove(i);
-            Self { vector: v }
-        })
+        let mut h = self.hash_map.clone();
+        h.remove(k).map(|_| Self { hash_map: h }.into())
     }
 
-    fn get<Q: ?Sized + PartialEq>(&self, k: &Q) -> Option<&V>
+    fn get<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<&V>
     where
         K: Borrow<Q>,
     {
-        self.find_index(k).map(|i| &self.vector[i].1)
+        self.hash_map.get(k)
     }
 
     fn is_singleton(&self) -> bool {
-        self.vector.len() == 1
+        self.hash_map.len() == 1
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct BucketIterator<'a, K, V> {
-    iterator: Iter<'a, (K, V)>,
+    iterator: Iter<'a, K, V>,
 }
 
 impl<'a, K, V> Iterator for BucketIterator<'a, K, V> {
@@ -91,13 +67,13 @@ impl<'a, K, V> Iterator for BucketIterator<'a, K, V> {
     }
 }
 
-impl<'a, K, V> IntoIterator for &'a Bucket<K, V> {
+impl<'a, K: Eq + Hash, V: PartialEq> IntoIterator for &'a Bucket<K, V> {
     type IntoIter = BucketIterator<'a, K, V>;
     type Item = (&'a K, &'a V);
 
     fn into_iter(self) -> Self::IntoIter {
         BucketIterator {
-            iterator: self.vector.iter(),
+            iterator: self.hash_map.iter(),
         }
     }
 }
@@ -138,5 +114,11 @@ mod test {
 
         assert_eq!(b.get(&42), Some(&0));
         assert_eq!(b.get(&0), None);
+    }
+
+    #[test]
+    fn eq() {
+        assert!(Bucket::new(0, 0).insert(1, 0) == Bucket::new(0, 0).insert(1, 0));
+        assert!(Bucket::new(0, 0).insert(1, 0) == Bucket::new(1, 0).insert(0, 0));
     }
 }

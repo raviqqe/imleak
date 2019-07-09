@@ -4,13 +4,13 @@ use std::borrow::Borrow;
 use std::hash::Hash;
 use std::sync::Arc;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct HashMap<K, V> {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HashMap<K: Eq + Hash, V: PartialEq> {
     size: usize,
     hamt: Arc<HAMT<K, V>>,
 }
 
-impl<K: Clone + Hash + PartialEq, V: Clone> HashMap<K, V> {
+impl<K: Clone + Eq + Hash, V: Clone + PartialEq> HashMap<K, V> {
     pub fn new() -> Self {
         Self {
             size: 0,
@@ -27,7 +27,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashMap<K, V> {
         }
     }
 
-    pub fn remove<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<Self>
+    pub fn remove<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<Self>
     where
         K: Borrow<Q>,
     {
@@ -37,7 +37,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashMap<K, V> {
         })
     }
 
-    pub fn get<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> Option<&V>
+    pub fn get<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<&V>
     where
         K: Borrow<Q>,
     {
@@ -49,17 +49,17 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashMap<K, V> {
     }
 }
 
-impl<K: Clone + Hash + PartialEq, V: Clone> Default for HashMap<K, V> {
+impl<K: Clone + Eq + Hash, V: Clone + PartialEq> Default for HashMap<K, V> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-pub struct HashMapIterator<'a, K: 'a, V: 'a> {
+pub struct HashMapIterator<'a, K: 'a + Eq + Hash, V: 'a + PartialEq> {
     hamt_iterator: HAMTIterator<'a, K, V>,
 }
 
-impl<'a, K, V> Iterator for HashMapIterator<'a, K, V> {
+impl<'a, K: Eq + Hash, V: PartialEq> Iterator for HashMapIterator<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -67,7 +67,7 @@ impl<'a, K, V> Iterator for HashMapIterator<'a, K, V> {
     }
 }
 
-impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
+impl<'a, K: Eq + Hash, V: PartialEq> IntoIterator for &'a HashMap<K, V> {
     type IntoIter = HashMapIterator<'a, K, V>;
     type Item = (&'a K, &'a V);
 
