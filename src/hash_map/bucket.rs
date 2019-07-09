@@ -63,7 +63,7 @@ impl<'a, K, V> Iterator for BucketIterator<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.next().map(|(k, v)| (k, v))
+        self.iterator.next()
     }
 }
 
