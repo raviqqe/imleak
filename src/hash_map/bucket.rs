@@ -1,6 +1,7 @@
 use super::node::Node;
 use std::borrow::Borrow;
 use std::hash::Hash;
+use std::slice::Iter;
 
 // TODO: Fix Eq and PartialEq impl.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -78,23 +79,14 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
 
 #[derive(Clone, Debug)]
 pub struct BucketIterator<'a, K, V> {
-    bucket: &'a Bucket<K, V>,
-    index: usize,
-}
-
-impl<'a, K, V> BucketIterator<'a, K, V> {
-    pub fn new(bucket: &'a Bucket<K, V>) -> Self {
-        Self { bucket, index: 0 }
-    }
+    iterator: Iter<'a, (K, V)>,
 }
 
 impl<'a, K, V> Iterator for BucketIterator<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = self.bucket.vector.get(self.index);
-        self.index += 1;
-        item.map(|(k, v)| (k, v))
+        self.iterator.next().map(|(k, v)| (k, v))
     }
 }
 
@@ -103,7 +95,9 @@ impl<'a, K, V> IntoIterator for &'a Bucket<K, V> {
     type Item = (&'a K, &'a V);
 
     fn into_iter(self) -> Self::IntoIter {
-        BucketIterator::new(self)
+        BucketIterator {
+            iterator: self.vector.iter(),
+        }
     }
 }
 
