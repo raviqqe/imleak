@@ -55,6 +55,19 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HAMT<K, V> {
     }
 
     #[cfg(test)]
+    fn size(&self) -> usize {
+        self.entries
+            .iter()
+            .map(|e| match e {
+                Entry::Empty => 0,
+                Entry::KeyValue(_, _) => 1,
+                Entry::HAMT(h) => h.size(),
+                Entry::Bucket(b) => b.size(),
+            })
+            .sum()
+    }
+
+    #[cfg(test)]
     fn contain_bucket(&self) -> bool {
         self.entries.iter().any(|e| match e {
             Entry::Bucket(_) => true,
@@ -162,16 +175,19 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for HAMT<K, V> {
         }
     }
 
-    fn size(&self) -> usize {
-        self.entries
-            .iter()
-            .map(|e| match e {
-                Entry::Empty => 0,
-                Entry::KeyValue(_, _) => 1,
-                Entry::HAMT(h) => h.size(),
-                Entry::Bucket(b) => b.size(),
-            })
-            .sum()
+    fn is_singleton(&self) -> bool {
+        let mut sum = 0;
+
+        for e in &self.entries {
+            match e {
+                Entry::Empty => {}
+                Entry::KeyValue(_, _) => sum += 1,
+                Entry::HAMT(_) => return false,
+                Entry::Bucket(_) => return false,
+            }
+        }
+
+        sum == 1
     }
 }
 
@@ -182,7 +198,7 @@ fn node_to_entry<'a, K: 'a + Clone + Hash + PartialEq, V: 'a + Clone, N: Clone +
 where
     &'a N: IntoIterator<Item = (&'a K, &'a V)>,
 {
-    if n.size() == 1 {
+    if n.is_singleton() {
         n.into_iter()
             .next()
             .map(|(k, v)| Entry::KeyValue(k.clone(), v.clone()))

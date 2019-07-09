@@ -18,6 +18,7 @@ impl<K, V> Bucket<K, V> {
 }
 
 impl<K, V> Bucket<K, V> {
+    #[cfg(test)]
     pub fn size(&self) -> usize {
         self.vector.len()
     }
@@ -72,8 +73,8 @@ impl<K: Clone + Hash + PartialEq, V: Clone> Node<K, V> for Bucket<K, V> {
         self.find_index(k).map(|i| &self.vector[i].1)
     }
 
-    fn size(&self) -> usize {
-        self.vector.len()
+    fn is_singleton(&self) -> bool {
+        self.vector.len() == 1
     }
 }
 
