@@ -39,7 +39,7 @@ impl<K: Clone + Eq + Hash, V: Clone + PartialEq> Node<K, V> for Bucket<K, V> {
         K: Borrow<Q>,
     {
         let mut h = self.hash_map.clone();
-        h.remove(k).map(|_| Self { hash_map: h }.into())
+        h.remove(k).map(|_| Self { hash_map: h })
     }
 
     fn get<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<&V>
