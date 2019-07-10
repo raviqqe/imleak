@@ -17,15 +17,8 @@ impl<K: Eq + Hash, V: PartialEq> Bucket<K, V> {
     }
 }
 
-impl<K: Eq + Hash, V: PartialEq> Bucket<K, V> {
-    #[cfg(test)]
-    pub fn len(&self) -> usize {
-        self.hash_map.len()
-    }
-}
-
-impl<K: Clone + Eq + Hash, V: Clone + PartialEq> Node<K, V> for Bucket<K, V> {
-    fn insert(&self, k: K, v: V) -> (Self, bool) {
+impl<K: Clone + Eq + Hash, V: Clone + PartialEq> Bucket<K, V> {
+    pub fn insert(&self, k: K, v: V) -> (Self, bool) {
         let mut h = self.hash_map.clone();
 
         match h.insert(k, v) {
@@ -34,7 +27,7 @@ impl<K: Clone + Eq + Hash, V: Clone + PartialEq> Node<K, V> for Bucket<K, V> {
         }
     }
 
-    fn remove<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<Self>
+    pub fn remove<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<Self>
     where
         K: Borrow<Q>,
     {
@@ -42,13 +35,20 @@ impl<K: Clone + Eq + Hash, V: Clone + PartialEq> Node<K, V> for Bucket<K, V> {
         h.remove(k).map(|_| Self { hash_map: h })
     }
 
-    fn get<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<&V>
+    pub fn get<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<&V>
     where
         K: Borrow<Q>,
     {
         self.hash_map.get(k)
     }
 
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.hash_map.len()
+    }
+}
+
+impl<K: Eq + Hash, V: PartialEq> Node for Bucket<K, V> {
     fn is_singleton(&self) -> bool {
         self.hash_map.len() == 1
     }

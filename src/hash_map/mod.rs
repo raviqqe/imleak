@@ -4,7 +4,6 @@ mod hamt;
 mod node;
 
 use hamt::{HAMTIterator, HAMT};
-use node::Node;
 use std::borrow::Borrow;
 use std::hash::Hash;
 use std::sync::Arc;

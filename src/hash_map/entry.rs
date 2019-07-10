@@ -34,7 +34,7 @@ fn convert_node_to_key_value<
     'a,
     K: 'a + Clone + Eq + Hash,
     V: 'a + Clone + PartialEq,
-    N: Clone + Node<K, V>,
+    N: Clone + Node,
 >(
     n: &'a N,
 ) -> Option<Entry<K, V>>
