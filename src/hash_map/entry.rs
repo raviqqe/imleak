@@ -30,12 +30,7 @@ impl<K: Clone + Eq + Hash, V: Clone + PartialEq> From<Bucket<K, V>> for Entry<K,
     }
 }
 
-fn convert_node_to_key_value<
-    'a,
-    K: 'a + Clone + Eq + Hash,
-    V: 'a + Clone + PartialEq,
-    N: Clone + Node,
->(
+fn convert_node_to_key_value<'a, K: 'a + Clone + Eq + Hash, V: 'a + Clone + PartialEq, N: Node>(
     n: &'a N,
 ) -> Option<Entry<K, V>>
 where
