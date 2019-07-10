@@ -25,15 +25,15 @@ impl<K: Eq + Hash, V: PartialEq> Default for Entry<K, V> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HAMT<K: Eq + Hash, V: PartialEq> {
     // TODO: Use bitmap.
-    level: u8,
     entries: [Entry<K, V>; NUM_ENTRIES],
+    level: u8,
 }
 
 impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HAMT<K, V> {
     pub fn new(l: u8) -> Self {
         Self {
-            level: l,
             entries: Default::default(),
+            level: l,
         }
     }
 
@@ -49,8 +49,8 @@ impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HAMT<K, V> {
         es[i] = e;
 
         Self {
-            level: self.level,
             entries: es,
+            level: self.level,
         }
     }
 
