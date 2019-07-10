@@ -1,4 +1,5 @@
 mod bucket;
+mod entry;
 mod hamt;
 mod node;
 

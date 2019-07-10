@@ -1,26 +1,12 @@
 use super::bucket::{Bucket, BucketIterator};
+use super::entry::Entry;
 use super::node::Node;
 use std::borrow::Borrow;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use std::sync::Arc;
 
 const MAX_LEVEL: u8 = 64 / 5;
 const NUM_ENTRIES: usize = 32;
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum Entry<K: Eq + Hash, V: PartialEq> {
-    Empty,
-    KeyValue(K, V),
-    HAMT(Arc<HAMT<K, V>>),
-    Bucket(Arc<Bucket<K, V>>),
-}
-
-impl<K: Eq + Hash, V: PartialEq> Default for Entry<K, V> {
-    fn default() -> Self {
-        Entry::Empty
-    }
-}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HAMT<K: Eq + Hash, V: PartialEq> {
@@ -134,7 +120,7 @@ impl<K: Clone + Eq + Hash, V: Clone + PartialEq> Node<K, V> for HAMT<K, V> {
     {
         let i = self.entry_index(k);
 
-        Some(self.set_entry(
+        self.set_entry(
             i,
             match &self.entries[i] {
                 Entry::Empty => return None,
@@ -147,14 +133,15 @@ impl<K: Clone + Eq + Hash, V: Clone + PartialEq> Node<K, V> for HAMT<K, V> {
                 }
                 Entry::HAMT(h) => match h.remove(k) {
                     None => return None,
-                    Some(h) => node_to_entry(&h, |h| Entry::HAMT(h.into())),
+                    Some(h) => h.into(),
                 },
                 Entry::Bucket(b) => match b.remove(k) {
                     None => return None,
-                    Some(b) => node_to_entry(&b, |b| Entry::Bucket(b.into())),
+                    Some(b) => b.into(),
                 },
             },
-        ))
+        )
+        .into()
     }
 
     fn get<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<&V>
@@ -188,23 +175,6 @@ impl<K: Clone + Eq + Hash, V: Clone + PartialEq> Node<K, V> for HAMT<K, V> {
         }
 
         sum == 1
-    }
-}
-
-fn node_to_entry<'a, K: 'a + Clone + Eq + Hash, V: 'a + Clone + PartialEq, N: Clone + Node<K, V>>(
-    n: &'a N,
-    f: fn(N) -> Entry<K, V>,
-) -> Entry<K, V>
-where
-    &'a N: IntoIterator<Item = (&'a K, &'a V)>,
-{
-    if n.is_singleton() {
-        n.into_iter()
-            .next()
-            .map(|(k, v)| Entry::KeyValue(k.clone(), v.clone()))
-            .expect("non-empty node")
-    } else {
-        f(n.clone())
     }
 }
 
