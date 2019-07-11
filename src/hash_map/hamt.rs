@@ -21,34 +21,34 @@ impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HAMT<K, V> {
         }
     }
 
-    pub fn insert(&self, k: HashedKey<K>, v: V) -> (Self, bool) {
-        let i = k.entry_index();
+    pub fn insert(&self, hk: HashedKey<K>, v: V) -> (Self, bool) {
+        let i = hk.entry_index();
 
         match &self.entries[i] {
-            Entry::Empty => (self.set_entry(i, Entry::KeyValue(k.to_key(), v)), true),
+            Entry::Empty => (self.set_entry(i, Entry::KeyValue(hk.to_key(), v)), true),
             Entry::KeyValue(kk, vv) => {
-                if kk == k.key() {
-                    (self.set_entry(i, Entry::KeyValue(k.to_key(), v)), false)
+                if kk == hk.key() {
+                    (self.set_entry(i, Entry::KeyValue(hk.to_key(), v)), false)
                 } else {
                     (
                         self.set_entry(
                             i,
-                            if k.level() < MAX_LEVEL {
+                            if hk.level() < MAX_LEVEL {
                                 Entry::HAMT(
                                     Self::new()
                                         .insert(
-                                            k.swap_key(kk.clone()).increment_level(),
+                                            hk.swap_key(kk.clone()).increment_level(),
                                             vv.clone(),
                                         )
                                         .0
-                                        .insert(k.increment_level(), v)
+                                        .insert(hk.increment_level(), v)
                                         .0
                                         .into(),
                                 )
                             } else {
                                 Entry::Bucket(
                                     Bucket::new(kk.clone(), vv.clone())
-                                        .insert(k.to_key(), v)
+                                        .insert(hk.to_key(), v)
                                         .0
                                         .into(),
                                 )
@@ -59,38 +59,38 @@ impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HAMT<K, V> {
                 }
             }
             Entry::HAMT(h) => {
-                let (h, new) = h.insert(k.increment_level(), v);
+                let (h, new) = h.insert(hk.increment_level(), v);
                 (self.set_entry(i, Entry::HAMT(h.into())), new)
             }
             Entry::Bucket(b) => {
-                let (b, new) = b.insert(k.to_key(), v);
+                let (b, new) = b.insert(hk.to_key(), v);
                 (self.set_entry(i, Entry::Bucket(b.into())), new)
             }
         }
     }
 
-    pub fn remove<Q: ?Sized + Eq + Hash>(&self, k: HashedKey<&Q>) -> Option<Self>
+    pub fn remove<Q: ?Sized + Eq + Hash>(&self, hk: HashedKey<&Q>) -> Option<Self>
     where
         K: Borrow<Q>,
     {
-        let i = k.entry_index();
+        let i = hk.entry_index();
 
         self.set_entry(
             i,
             match &self.entries[i] {
                 Entry::Empty => return None,
                 Entry::KeyValue(kk, _) => {
-                    if &kk.borrow() == k.key() {
+                    if &kk.borrow() == hk.key() {
                         Entry::Empty
                     } else {
                         return None;
                     }
                 }
-                Entry::HAMT(h) => match h.remove(k.increment_level()) {
+                Entry::HAMT(h) => match h.remove(hk.increment_level()) {
                     None => return None,
                     Some(h) => h.into(),
                 },
-                Entry::Bucket(b) => match b.remove(k.key()) {
+                Entry::Bucket(b) => match b.remove(hk.key()) {
                     None => return None,
                     Some(b) => b.into(),
                 },
@@ -99,21 +99,21 @@ impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HAMT<K, V> {
         .into()
     }
 
-    pub fn get<Q: ?Sized + Eq + Hash>(&self, k: HashedKey<&Q>) -> Option<&V>
+    pub fn get<Q: ?Sized + Eq + Hash>(&self, hk: HashedKey<&Q>) -> Option<&V>
     where
         K: Borrow<Q>,
     {
-        match &self.entries[k.entry_index()] {
+        match &self.entries[hk.entry_index()] {
             Entry::Empty => None,
             Entry::KeyValue(kk, vv) => {
-                if &kk.borrow() == k.key() {
+                if &kk.borrow() == hk.key() {
                     Some(vv)
                 } else {
                     None
                 }
             }
-            Entry::HAMT(h) => h.get(k.increment_level()),
-            Entry::Bucket(b) => b.get(k.key()),
+            Entry::HAMT(h) => h.get(hk.increment_level()),
+            Entry::Bucket(b) => b.get(hk.key()),
         }
     }
 
