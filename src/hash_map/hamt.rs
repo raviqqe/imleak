@@ -1,9 +1,9 @@
 use super::bucket::{Bucket, BucketIterator};
 use super::entry::Entry;
+use super::hashed_key::HashedKey;
 use super::node::Node;
 use std::borrow::Borrow;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 
 const MAX_LEVEL: u8 = 64 / 5;
 const NUM_ENTRIES: usize = 32;
@@ -12,41 +12,45 @@ const NUM_ENTRIES: usize = 32;
 pub struct HAMT<K: Eq + Hash, V: PartialEq> {
     // TODO: Use bitmap.
     entries: [Entry<K, V>; NUM_ENTRIES],
-    level: u8,
 }
 
 impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HAMT<K, V> {
-    pub fn new(l: u8) -> Self {
+    pub fn new() -> Self {
         Self {
             entries: Default::default(),
-            level: l,
         }
     }
 
-    pub fn insert(&self, k: K, v: V) -> (Self, bool) {
-        let i = self.entry_index(&k);
+    pub fn insert(&self, k: HashedKey<K>, v: V) -> (Self, bool) {
+        let i = k.entry_index();
 
         match &self.entries[i] {
-            Entry::Empty => (self.set_entry(i, Entry::KeyValue(k, v)), true),
+            Entry::Empty => (self.set_entry(i, Entry::KeyValue(k.to_key(), v)), true),
             Entry::KeyValue(kk, vv) => {
-                if kk == &k {
-                    (self.set_entry(i, Entry::KeyValue(k, v)), false)
+                if kk == k.key() {
+                    (self.set_entry(i, Entry::KeyValue(k.to_key(), v)), false)
                 } else {
                     (
                         self.set_entry(
                             i,
-                            if self.level < MAX_LEVEL {
+                            if k.level() < MAX_LEVEL {
                                 Entry::HAMT(
-                                    Self::new(self.level + 1)
-                                        .insert(kk.clone(), vv.clone())
+                                    Self::new()
+                                        .insert(
+                                            k.swap_key(kk.clone()).increment_level(),
+                                            vv.clone(),
+                                        )
                                         .0
-                                        .insert(k, v)
+                                        .insert(k.increment_level(), v)
                                         .0
                                         .into(),
                                 )
                             } else {
                                 Entry::Bucket(
-                                    Bucket::new(kk.clone(), vv.clone()).insert(k, v).0.into(),
+                                    Bucket::new(kk.clone(), vv.clone())
+                                        .insert(k.to_key(), v)
+                                        .0
+                                        .into(),
                                 )
                             },
                         ),
@@ -55,38 +59,38 @@ impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HAMT<K, V> {
                 }
             }
             Entry::HAMT(h) => {
-                let (h, new) = h.insert(k, v);
+                let (h, new) = h.insert(k.increment_level(), v);
                 (self.set_entry(i, Entry::HAMT(h.into())), new)
             }
             Entry::Bucket(b) => {
-                let (b, new) = b.insert(k, v);
+                let (b, new) = b.insert(k.to_key(), v);
                 (self.set_entry(i, Entry::Bucket(b.into())), new)
             }
         }
     }
 
-    pub fn remove<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<Self>
+    pub fn remove<Q: ?Sized + Eq + Hash>(&self, k: HashedKey<&Q>) -> Option<Self>
     where
         K: Borrow<Q>,
     {
-        let i = self.entry_index(k);
+        let i = k.entry_index();
 
         self.set_entry(
             i,
             match &self.entries[i] {
                 Entry::Empty => return None,
                 Entry::KeyValue(kk, _) => {
-                    if kk.borrow() == k {
+                    if &kk.borrow() == k.key() {
                         Entry::Empty
                     } else {
                         return None;
                     }
                 }
-                Entry::HAMT(h) => match h.remove(k) {
+                Entry::HAMT(h) => match h.remove(k.increment_level()) {
                     None => return None,
                     Some(h) => h.into(),
                 },
-                Entry::Bucket(b) => match b.remove(k) {
+                Entry::Bucket(b) => match b.remove(k.key()) {
                     None => return None,
                     Some(b) => b.into(),
                 },
@@ -95,39 +99,29 @@ impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HAMT<K, V> {
         .into()
     }
 
-    pub fn get<Q: ?Sized + Eq + Hash>(&self, k: &Q) -> Option<&V>
+    pub fn get<Q: ?Sized + Eq + Hash>(&self, k: HashedKey<&Q>) -> Option<&V>
     where
         K: Borrow<Q>,
     {
-        match &self.entries[self.entry_index(k)] {
+        match &self.entries[k.entry_index()] {
             Entry::Empty => None,
             Entry::KeyValue(kk, vv) => {
-                if kk.borrow() == k {
+                if &kk.borrow() == k.key() {
                     Some(vv)
                 } else {
                     None
                 }
             }
-            Entry::HAMT(h) => h.get(k),
-            Entry::Bucket(b) => b.get(k),
+            Entry::HAMT(h) => h.get(k.increment_level()),
+            Entry::Bucket(b) => b.get(k.key()),
         }
-    }
-
-    fn entry_index<Q: ?Sized + Hash + PartialEq>(&self, k: &Q) -> usize
-    where
-        K: Borrow<Q>,
-    {
-        ((hash(k) >> (self.level * 5)) & 0b11111) as usize
     }
 
     fn set_entry(&self, i: usize, e: Entry<K, V>) -> Self {
         let mut es = self.entries.clone();
         es[i] = e;
 
-        Self {
-            entries: es,
-            level: self.level,
-        }
+        Self { entries: es }
     }
 
     #[cfg(test)]
@@ -176,12 +170,6 @@ impl<K: Eq + Hash, V: PartialEq> Node for HAMT<K, V> {
 
         sum == 1
     }
-}
-
-fn hash<K: ?Sized + Hash>(k: &K) -> u64 {
-    let mut h = DefaultHasher::new();
-    k.hash(&mut h);
-    h.finish()
 }
 
 #[derive(Clone, Debug)]
@@ -237,36 +225,36 @@ impl<'a, K: Eq + Hash, V: PartialEq> Iterator for HAMTIterator<'a, K, V> {
 
 #[cfg(test)]
 mod test {
-    use super::super::node::Node;
-    use super::{hash, HAMT, MAX_LEVEL};
+    use super::super::hashed_key::HashedKey;
+    use super::{HAMT, MAX_LEVEL};
     use rand::{random, seq::SliceRandom, thread_rng};
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashMap;
     use test::Bencher;
 
     const NUM_ITERATIONS: usize = 1 << 12;
 
     #[test]
     fn new() {
-        HAMT::new(0) as HAMT<usize, usize>;
+        HAMT::new() as HAMT<usize, usize>;
     }
 
     #[test]
     fn insert() {
-        let h = HAMT::new(0);
+        let h = HAMT::new();
 
         assert_eq!(h.len(), 0);
 
-        let (h, b) = h.insert(0, 0);
+        let (h, b) = h.insert(HashedKey::new(0), 0);
 
         assert!(b);
         assert_eq!(h.len(), 1);
 
-        let (hh, b) = h.insert(0, 0);
+        let (hh, b) = h.insert(HashedKey::new(0), 0);
 
         assert!(!b);
         assert_eq!(hh.len(), 1);
 
-        let (h, b) = h.insert(1, 0);
+        let (h, b) = h.insert(HashedKey::new(1), 0);
 
         assert!(b);
         assert_eq!(h.len(), 2);
@@ -274,10 +262,10 @@ mod test {
 
     #[test]
     fn insert_many_in_order() {
-        let mut h = HAMT::new(0);
+        let mut h = HAMT::new();
 
         for i in 0..NUM_ITERATIONS {
-            let (hh, b) = h.insert(i, i);
+            let (hh, b) = h.insert(HashedKey::new(i), i);
             h = hh;
             assert!(b);
             assert_eq!(h.len(), i + 1);
@@ -286,51 +274,72 @@ mod test {
 
     #[test]
     fn insert_many_at_random() {
-        let mut h: HAMT<usize, usize> = HAMT::new(0);
+        let mut h: HAMT<usize, usize> = HAMT::new();
 
         for i in 0..NUM_ITERATIONS {
             let k = random();
-            h = h.insert(k, k).0;
+            h = h.insert(HashedKey::new(k), k).0;
             assert_eq!(h.len(), i + 1);
         }
     }
 
     #[test]
     fn remove() {
-        let h = HAMT::new(0);
+        let h = HAMT::new();
 
-        assert_eq!(h.insert(0, 0).0.remove(&0), Some(h.clone()));
-        assert_eq!(h.insert(0, 0).0.remove(&1), None);
         assert_eq!(
-            h.insert(0, 0).0.insert(1, 0).0.remove(&0),
-            Some(h.insert(1, 0).0)
+            h.insert(HashedKey::new(0), 0).0.remove(HashedKey::new(&0)),
+            Some(h.clone())
         );
         assert_eq!(
-            h.insert(0, 0).0.insert(1, 0).0.remove(&1),
-            Some(h.insert(0, 0).0)
+            h.insert(HashedKey::new(0), 0).0.remove(HashedKey::new(&1)),
+            None
         );
-        assert_eq!(h.insert(0, 0).0.insert(1, 0).0.remove(&2), None);
+        assert_eq!(
+            h.insert(HashedKey::new(0), 0)
+                .0
+                .insert(HashedKey::new(1), 0)
+                .0
+                .remove(HashedKey::new(&0)),
+            Some(h.insert(HashedKey::new(1), 0).0)
+        );
+        assert_eq!(
+            h.insert(HashedKey::new(0), 0)
+                .0
+                .insert(HashedKey::new(1), 0)
+                .0
+                .remove(HashedKey::new(&1)),
+            Some(h.insert(HashedKey::new(0), 0).0)
+        );
+        assert_eq!(
+            h.insert(HashedKey::new(0), 0)
+                .0
+                .insert(HashedKey::new(1), 0)
+                .0
+                .remove(HashedKey::new(&2)),
+            None
+        );
     }
 
     #[test]
     fn insert_delete_many() {
-        let mut h: HAMT<i16, i16> = HAMT::new(0);
+        let mut h: HAMT<i16, i16> = HAMT::new();
 
         for _ in 0..NUM_ITERATIONS {
             let k = random();
             let s = h.len();
-            let found = h.get(&k).is_some();
+            let found = h.get(HashedKey::new(&k)).is_some();
 
             if random() {
-                h = h.insert(k, k).0;
+                h = h.insert(HashedKey::new(k), k).0;
 
                 assert_eq!(h.len(), if found { s } else { s + 1 });
-                assert_eq!(h.get(&k), Some(&k));
+                assert_eq!(h.get(HashedKey::new(&k)), Some(&k));
             } else {
-                h = h.remove(&k).unwrap_or(h);
+                h = h.remove(HashedKey::new(&k)).unwrap_or(h);
 
                 assert_eq!(h.len(), if found { s - 1 } else { s });
-                assert_eq!(h.get(&k), None);
+                assert_eq!(h.get(HashedKey::new(&k)), None);
             }
 
             assert!(h.is_normal());
@@ -339,21 +348,54 @@ mod test {
 
     #[test]
     fn get() {
-        let h = HAMT::new(0);
+        let h = HAMT::new();
 
-        assert_eq!(h.insert(0, 0).0.get(&0), Some(&0));
-        assert_eq!(h.insert(0, 0).0.get(&1), None);
-        assert_eq!(h.insert(1, 0).0.get(&0), None);
-        assert_eq!(h.insert(1, 0).0.get(&1), Some(&0));
-        assert_eq!(h.insert(0, 0).0.insert(1, 0).0.get(&0), Some(&0));
-        assert_eq!(h.insert(0, 0).0.insert(1, 0).0.get(&1), Some(&0));
-        assert_eq!(h.insert(0, 0).0.insert(1, 0).0.get(&2), None);
+        assert_eq!(
+            h.insert(HashedKey::new(0), 0).0.get(HashedKey::new(&0)),
+            Some(&0)
+        );
+        assert_eq!(
+            h.insert(HashedKey::new(0), 0).0.get(HashedKey::new(&1)),
+            None
+        );
+        assert_eq!(
+            h.insert(HashedKey::new(1), 0).0.get(HashedKey::new(&0)),
+            None
+        );
+        assert_eq!(
+            h.insert(HashedKey::new(1), 0).0.get(HashedKey::new(&1)),
+            Some(&0)
+        );
+        assert_eq!(
+            h.insert(HashedKey::new(0), 0)
+                .0
+                .insert(HashedKey::new(1), 0)
+                .0
+                .get(HashedKey::new(&0)),
+            Some(&0)
+        );
+        assert_eq!(
+            h.insert(HashedKey::new(0), 0)
+                .0
+                .insert(HashedKey::new(1), 0)
+                .0
+                .get(HashedKey::new(&1)),
+            Some(&0)
+        );
+        assert_eq!(
+            h.insert(HashedKey::new(0), 0)
+                .0
+                .insert(HashedKey::new(1), 0)
+                .0
+                .get(HashedKey::new(&2)),
+            None
+        );
     }
 
     #[test]
     fn equality() {
         for _ in 0..8 {
-            let mut hs: [HAMT<i16, i16>; 2] = [HAMT::new(0), HAMT::new(0)];
+            let mut hs: [HAMT<i16, i16>; 2] = [HAMT::new(), HAMT::new()];
             let mut is: Vec<i16> = (0..NUM_ITERATIONS).map(|_| random()).collect();
             let mut ds: Vec<i16> = (0..NUM_ITERATIONS).map(|_| random()).collect();
 
@@ -362,11 +404,11 @@ mod test {
                 ds.shuffle(&mut thread_rng());
 
                 for i in &is {
-                    *h = h.insert(*i, *i).0;
+                    *h = h.insert(HashedKey::new(*i), *i).0;
                 }
 
                 for d in &ds {
-                    *h = h.remove(&d).unwrap_or(h.clone());
+                    *h = h.remove(HashedKey::new(&d)).unwrap_or(h.clone());
                 }
             }
 
@@ -376,21 +418,16 @@ mod test {
 
     #[test]
     fn collision() {
-        let mut h = HAMT::new(MAX_LEVEL);
-        let mut s = HashSet::new();
+        let mut h = HAMT::new();
 
-        for k in 0.. {
-            assert!(!h.contain_bucket());
+        for k in 0..33 {
+            let mut hk = HashedKey::new(k);
 
-            h = h.insert(k, k).0;
-
-            let i = hash(&k) >> 60;
-
-            if s.contains(&i) {
-                break;
+            for _ in 0..MAX_LEVEL {
+                hk = hk.increment_level()
             }
 
-            s.insert(i);
+            h = h.insert(hk, k).0;
         }
 
         assert!(h.contain_bucket());
@@ -406,14 +443,20 @@ mod test {
 
         for l in vec![0, MAX_LEVEL] {
             for s in &ss {
-                let mut h: HAMT<i16, i16> = HAMT::new(l);
+                let mut h: HAMT<i16, i16> = HAMT::new();
                 let mut m: HashMap<i16, i16> = HashMap::new();
 
                 for _ in 0..*s {
                     let k = random();
                     let v = random();
 
-                    let (hh, _) = h.insert(k, v);
+                    let mut hk = HashedKey::new(k);
+
+                    for _ in 0..l {
+                        hk = hk.increment_level()
+                    }
+
+                    let (hh, _) = h.insert(hk, v);
                     h = hh;
 
                     m.insert(k, v);
@@ -421,7 +464,7 @@ mod test {
 
                 let mut s = 0;
 
-                for (k, v) in h.into_iter() {
+                for (k, v) in &h {
                     s += 1;
 
                     assert_eq!(m[k], *v);
@@ -436,10 +479,15 @@ mod test {
     fn iterate_with_buckets() {
         let ks = (0..1000).collect::<Vec<_>>();
 
-        let mut h = HAMT::new(MAX_LEVEL);
+        let mut h = HAMT::new();
 
         for k in &ks {
-            h = h.insert(k, k).0;
+            let mut hk = HashedKey::new(k);
+
+            for _ in 0..MAX_LEVEL {
+                hk = hk.increment_level()
+            }
+            h = h.insert(hk, k).0;
         }
 
         assert_eq!(ks.len(), h.into_iter().collect::<Vec<_>>().len())
@@ -454,10 +502,10 @@ mod test {
         let ks = keys();
 
         b.iter(|| {
-            let mut h = HAMT::new(0);
+            let mut h = HAMT::new();
 
             for k in &ks {
-                h = h.insert(k, k).0;
+                h = h.insert(HashedKey::new(k), k).0;
             }
         });
     }
@@ -465,15 +513,15 @@ mod test {
     #[bench]
     fn bench_get_1000(b: &mut Bencher) {
         let ks = keys();
-        let mut h = HAMT::new(0);
+        let mut h = HAMT::new();
 
         for k in &ks {
-            h = h.insert(k, k).0;
+            h = h.insert(HashedKey::new(k), k).0;
         }
 
         b.iter(|| {
             for k in &ks {
-                h.get(&k);
+                h.get(HashedKey::new(&k));
             }
         });
     }

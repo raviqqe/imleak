@@ -1,9 +1,11 @@
 mod bucket;
 mod entry;
 mod hamt;
+mod hashed_key;
 mod node;
 
 use hamt::{HAMTIterator, HAMT};
+use hashed_key::HashedKey;
 use std::borrow::Borrow;
 use std::hash::Hash;
 use std::sync::Arc;
@@ -18,12 +20,12 @@ impl<K: Clone + Eq + Hash, V: Clone + PartialEq> HashMap<K, V> {
     pub fn new() -> Self {
         Self {
             len: 0,
-            hamt: HAMT::new(0).into(),
+            hamt: HAMT::new().into(),
         }
     }
 
     pub fn insert(&self, k: K, v: V) -> Self {
-        let (h, b) = self.hamt.insert(k, v);
+        let (h, b) = self.hamt.insert(HashedKey::new(k), v);
 
         Self {
             len: self.len + (b as usize),
@@ -35,7 +37,7 @@ impl<K: Clone + Eq + Hash, V: Clone + PartialEq> HashMap<K, V> {
     where
         K: Borrow<Q>,
     {
-        self.hamt.remove(k).map(|h| Self {
+        self.hamt.remove(HashedKey::new(k)).map(|h| Self {
             len: self.len - 1,
             hamt: h.into(),
         })
@@ -45,7 +47,7 @@ impl<K: Clone + Eq + Hash, V: Clone + PartialEq> HashMap<K, V> {
     where
         K: Borrow<Q>,
     {
-        self.hamt.get(k)
+        self.hamt.get(HashedKey::new(k))
     }
 
     pub fn len(&self) -> usize {
