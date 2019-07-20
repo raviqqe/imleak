@@ -10,11 +10,9 @@ pub struct HashedKey<K> {
 
 impl<K: Hash> HashedKey<K> {
     pub fn new(k: K) -> Self {
-        let h = Self::hash(&k);
-
         Self {
+            hash: Self::hash(&k),
             key: k,
-            hash: h,
             level: 0,
         }
     }
@@ -32,11 +30,9 @@ impl<K: Hash> HashedKey<K> {
     }
 
     pub fn swap_key(&self, k: K) -> Self {
-        let h = Self::hash(&k);
-
         Self {
+            hash: Self::hash(&k) >> (self.level * 5),
             key: k,
-            hash: h >> (self.level * 5),
             level: self.level,
         }
     }
