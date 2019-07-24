@@ -2,8 +2,6 @@ use super::internal_node::InternalNode;
 use super::leaf_node::LeafNode;
 use crate::tagged_ref::TaggedRef;
 
-const ALIGNMENT: usize = 8;
-
 #[derive(Clone, Copy, Debug)]
 pub struct NodeRef {
     tagged_ref: TaggedRef,
@@ -22,13 +20,50 @@ impl NodeRef {
         }
     }
 
-    pub fn tag(&self) -> NodeTag {
-        self.tagged_ref.tag().into()
+    pub fn as_ref<T: Copy>(&self) -> ConcreteNodeRef<T> {
+        match self.tagged_ref.tag().into() {
+            NodeTag::InternalNode => ConcreteNodeRef::InternalNode(self.tagged_ref.as_ptr()),
+            NodeTag::LeafNode => ConcreteNodeRef::LeafNode(self.tagged_ref.as_ptr()),
+        }
+    }
+
+    pub fn push_back<T: Copy>(&self, value: T) -> Option<NodeRef> {
+        match self.as_ref() {
+            ConcreteNodeRef::InternalNode(internal_node) => {
+                internal_node.push_back(value).map(Self::internal)
+            }
+            ConcreteNodeRef::LeafNode(leaf_node) => leaf_node.push_back(value).map(Self::leaf),
+        }
+    }
+
+    pub fn level<T: Copy>(&self) -> usize {
+        match self.as_ref::<T>() {
+            ConcreteNodeRef::InternalNode(internal_node) => internal_node.level::<T>(),
+            ConcreteNodeRef::LeafNode(_) => 0,
+        }
     }
 }
 
+impl From<InternalNode> for NodeRef {
+    fn from(internal_node: InternalNode) -> Self {
+        NodeRef::internal(internal_node)
+    }
+}
+
+impl<T: Copy> From<LeafNode<T>> for NodeRef {
+    fn from(leaf_node: LeafNode<T>) -> Self {
+        NodeRef::leaf(leaf_node)
+    }
+}
+
+#[derive(Clone)]
+pub enum ConcreteNodeRef<'a, T: Copy> {
+    InternalNode(&'a InternalNode),
+    LeafNode(&'a LeafNode<T>),
+}
+
 #[derive(Clone, Copy, Debug)]
-pub enum NodeTag {
+enum NodeTag {
     InternalNode,
     LeafNode,
 }

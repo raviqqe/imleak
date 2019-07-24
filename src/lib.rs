@@ -1,4 +1,4 @@
-#![feature(test)]
+#![feature(maybe_uninit_extra, test)]
 
 #[cfg(test)]
 extern crate rand;
@@ -10,3 +10,4 @@ mod tagged_ref;
 mod vector;
 
 pub use hash_map::HashMap;
+pub use vector::Vector;
