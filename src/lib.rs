@@ -7,7 +7,7 @@ extern crate test;
 
 mod hash_map;
 mod tagged_ref;
-mod vector;
+mod vec;
 
 pub use hash_map::HashMap;
-pub use vector::Vector;
+pub use vec::Vec;

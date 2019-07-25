@@ -10,12 +10,12 @@ use node_ref::NodeRef;
 use utilities::create_branch;
 
 #[derive(Clone, Debug)]
-pub struct Vector<T: Copy> {
+pub struct Vec<T: Copy> {
     root: NodeRef<T>,
     len: usize,
 }
 
-impl<T: Copy> Vector<T> {
+impl<T: Copy> Vec<T> {
     pub fn new() -> Self {
         Self {
             root: NodeRef::leaf(LeafNode::new(&[])),
@@ -43,16 +43,16 @@ impl<T: Copy> Vector<T> {
 
 #[cfg(test)]
 mod test {
-    use super::Vector;
+    use super::Vec;
 
     #[test]
     fn new() {
-        Vector::<usize>::new();
+        Vec::<usize>::new();
     }
 
     #[test]
     fn push_back() {
-        let mut vec = Vector::<usize>::new();
+        let mut vec = Vec::<usize>::new();
 
         for index in 0..1000 {
             vec = vec.push_back(index);
