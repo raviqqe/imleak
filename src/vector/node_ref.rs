@@ -1,33 +1,37 @@
 use super::internal_node::InternalNode;
 use super::leaf_node::LeafNode;
 use crate::tagged_ref::TaggedRef;
+use std::marker::PhantomData;
 
 #[derive(Clone, Copy, Debug)]
-pub struct NodeRef {
+pub struct NodeRef<T: Copy> {
     tagged_ref: TaggedRef,
+    phantom: PhantomData<*const LeafNode<T>>,
 }
 
-impl NodeRef {
-    pub fn internal(internal_node: InternalNode) -> Self {
+impl<T: Copy> NodeRef<T> {
+    pub fn internal(internal_node: InternalNode<T>) -> Self {
         Self {
             tagged_ref: TaggedRef::new(internal_node, NodeTag::InternalNode.into()),
+            phantom: PhantomData,
         }
     }
 
-    pub fn leaf<T: Copy>(leaf_node: LeafNode<T>) -> Self {
+    pub fn leaf(leaf_node: LeafNode<T>) -> Self {
         Self {
             tagged_ref: TaggedRef::new(leaf_node, NodeTag::LeafNode.into()),
+            phantom: PhantomData,
         }
     }
 
-    pub fn as_ref<T: Copy>(&self) -> ConcreteNodeRef<T> {
+    pub fn as_ref(&self) -> ConcreteNodeRef<T> {
         match self.tagged_ref.tag().into() {
             NodeTag::InternalNode => ConcreteNodeRef::InternalNode(self.tagged_ref.as_ptr()),
             NodeTag::LeafNode => ConcreteNodeRef::LeafNode(self.tagged_ref.as_ptr()),
         }
     }
 
-    pub fn push_back<T: Copy>(&self, value: T) -> Option<NodeRef> {
+    pub fn push_back(&self, value: T) -> Option<Self> {
         match self.as_ref() {
             ConcreteNodeRef::InternalNode(internal_node) => {
                 internal_node.push_back(value).map(Self::internal)
@@ -36,21 +40,28 @@ impl NodeRef {
         }
     }
 
-    pub fn level<T: Copy>(&self) -> usize {
-        match self.as_ref::<T>() {
-            ConcreteNodeRef::InternalNode(internal_node) => internal_node.level::<T>(),
+    pub fn level(&self) -> usize {
+        match self.as_ref() {
+            ConcreteNodeRef::InternalNode(internal_node) => internal_node.level(),
             ConcreteNodeRef::LeafNode(_) => 0,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self.as_ref() {
+            ConcreteNodeRef::InternalNode(internal_node) => internal_node.len(),
+            ConcreteNodeRef::LeafNode(leaf_node) => leaf_node.len(),
         }
     }
 }
 
-impl From<InternalNode> for NodeRef {
-    fn from(internal_node: InternalNode) -> Self {
+impl<T: Copy> From<InternalNode<T>> for NodeRef<T> {
+    fn from(internal_node: InternalNode<T>) -> Self {
         NodeRef::internal(internal_node)
     }
 }
 
-impl<T: Copy> From<LeafNode<T>> for NodeRef {
+impl<T: Copy> From<LeafNode<T>> for NodeRef<T> {
     fn from(leaf_node: LeafNode<T>) -> Self {
         NodeRef::leaf(leaf_node)
     }
@@ -58,7 +69,7 @@ impl<T: Copy> From<LeafNode<T>> for NodeRef {
 
 #[derive(Clone)]
 pub enum ConcreteNodeRef<'a, T: Copy> {
-    InternalNode(&'a InternalNode),
+    InternalNode(&'a InternalNode<T>),
     LeafNode(&'a LeafNode<T>),
 }
 

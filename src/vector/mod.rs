@@ -1,37 +1,34 @@
 mod internal_node;
 mod leaf_node;
 mod node_ref;
+mod slot;
 mod utilities;
 
 use internal_node::InternalNode;
 use leaf_node::LeafNode;
 use node_ref::NodeRef;
-use std::marker::PhantomData;
 use utilities::create_branch;
 
 #[derive(Clone, Debug)]
-pub struct Vector<T> {
-    root: NodeRef,
+pub struct Vector<T: Copy> {
+    root: NodeRef<T>,
     len: usize,
-    phantom: PhantomData<T>,
 }
 
 impl<T: Copy> Vector<T> {
     pub fn new() -> Self {
         Self {
-            root: NodeRef::leaf::<T>(LeafNode::new(&[])),
+            root: NodeRef::leaf(LeafNode::new(&[])),
             len: 0,
-            phantom: PhantomData,
         }
     }
 
     pub fn push_back(&self, value: T) -> Self {
         Self {
             root: self.root.push_back(value).unwrap_or_else(|| {
-                InternalNode::new(&[self.root, create_branch(value, self.root.level::<T>())]).into()
+                InternalNode::new(&[self.root, create_branch(value, self.root.level())]).into()
             }),
             len: self.len + 1,
-            phantom: PhantomData,
         }
     }
 
