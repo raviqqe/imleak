@@ -26,8 +26,8 @@ impl<T: Copy> NodeRef<T> {
 
     pub fn as_ref(&self) -> ConcreteNodeRef<T> {
         match self.tagged_ref.tag().into() {
-            NodeTag::InternalNode => ConcreteNodeRef::InternalNode(self.tagged_ref.as_ptr()),
-            NodeTag::LeafNode => ConcreteNodeRef::LeafNode(self.tagged_ref.as_ptr()),
+            NodeTag::InternalNode => ConcreteNodeRef::InternalNode(self.tagged_ref.as_ref()),
+            NodeTag::LeafNode => ConcreteNodeRef::LeafNode(self.tagged_ref.as_ref()),
         }
     }
 
@@ -57,13 +57,13 @@ impl<T: Copy> NodeRef<T> {
 
 impl<T: Copy> From<InternalNode<T>> for NodeRef<T> {
     fn from(internal_node: InternalNode<T>) -> Self {
-        NodeRef::internal(internal_node)
+        Self::internal(internal_node)
     }
 }
 
 impl<T: Copy> From<LeafNode<T>> for NodeRef<T> {
     fn from(leaf_node: LeafNode<T>) -> Self {
-        NodeRef::leaf(leaf_node)
+        Self::leaf(leaf_node)
     }
 }
 

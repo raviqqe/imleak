@@ -29,7 +29,7 @@ impl TaggedRef {
         self.ptr & TAG_MASK
     }
 
-    pub fn as_ptr<T>(&self) -> &T {
+    pub fn as_ref<T>(&self) -> &T {
         unsafe { &*((self.ptr & !TAG_MASK) as *const T) }
     }
 }
@@ -53,6 +53,6 @@ mod test {
 
     #[test]
     fn as_ptr() {
-        assert_eq!(*TaggedRef::new(42 as usize, 3).as_ptr::<usize>(), 42);
+        assert_eq!(*TaggedRef::new(42 as usize, 3).as_ref::<usize>(), 42);
     }
 }
