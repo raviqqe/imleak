@@ -116,7 +116,7 @@ impl<'a, T: Copy> Iterator for InternalNodeIterator<'a, T> {
     type Item = NodeRef<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.internal_node.size() {
+        if self.index == self.internal_node.size() {
             None
         } else {
             let node_ref = self.internal_node.get(self.index).node_ref();
