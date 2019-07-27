@@ -1,11 +1,11 @@
+use super::constants::MAX_SIZE;
 use super::node_ref::NodeRef;
+use std::fmt::{self, Debug, Formatter};
 use std::mem::MaybeUninit;
-
-const MAX_LEN: usize = 32;
 
 #[derive(Clone)]
 pub struct LeafNode<T: Copy> {
-    values: [MaybeUninit<T>; MAX_LEN],
+    values: [MaybeUninit<T>; MAX_SIZE],
     len: usize,
 }
 
@@ -16,16 +16,15 @@ impl<T: Copy> LeafNode<T> {
             len: 0,
         };
 
-        for (index, value) in values.iter().enumerate() {
-            leaf_node.values[index] = MaybeUninit::new(*value);
-            leaf_node.len += 1;
+        for value in values {
+            leaf_node.append_value(*value);
         }
 
         leaf_node.into()
     }
 
     pub fn push_back(&self, value: T) -> Option<NodeRef<T>> {
-        if self.len == MAX_LEN {
+        if self.len == MAX_SIZE {
             None
         } else {
             let mut leaf_node = self.clone();
@@ -39,6 +38,11 @@ impl<T: Copy> LeafNode<T> {
 
     pub fn len(&self) -> usize {
         self.len
+    }
+
+    fn append_value(&mut self, value: T) {
+        self.values[self.len] = MaybeUninit::new(value);
+        self.len += 1;
     }
 
     pub fn get(&self, index: usize) -> T {
@@ -76,6 +80,28 @@ impl<'a, T: Copy> Iterator for LeafNodeIterator<'a, T> {
 
             Some(value)
         }
+    }
+}
+
+impl<T: Copy + PartialEq> PartialEq for LeafNode<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len != other.len {
+            return false;
+        }
+
+        for index in 0..self.len {
+            if self.get(index) != other.get(index) {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
+impl<T: Copy> Debug for LeafNode<T> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "LeafNode {{ len: {} }}", self.len)
     }
 }
 

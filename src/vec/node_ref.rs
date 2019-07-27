@@ -65,6 +65,14 @@ impl<T: Copy> NodeRef<T> {
             ConcreteNodeRef::LeafNode(leaf_node) => Some(leaf_node),
         }
     }
+
+    // Returns a node size.
+    pub fn size(&self) -> usize {
+        match self.as_ref() {
+            ConcreteNodeRef::InternalNode(internal_node) => internal_node.size(),
+            ConcreteNodeRef::LeafNode(leaf_node) => leaf_node.len(),
+        }
+    }
 }
 
 impl<T: Copy> From<InternalNode<T>> for NodeRef<T> {

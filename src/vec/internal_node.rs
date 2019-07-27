@@ -1,9 +1,8 @@
+use super::constants::MAX_SIZE;
 use super::node_ref::NodeRef;
 use super::slot::Slot;
 use super::utilities::create_branch;
 use std::mem::MaybeUninit;
-
-const MAX_SIZE: usize = 32;
 
 #[derive(Clone)]
 pub struct InternalNode<T: Copy> {
