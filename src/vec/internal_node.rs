@@ -26,10 +26,7 @@ impl<T: Copy> InternalNode<T> {
     }
 
     pub fn push_back(&self, value: T) -> Option<NodeRef<T>> {
-        match unsafe { self.slots[self.size - 1].read() }
-            .node_ref()
-            .push_back(value)
-        {
+        match self.get(self.size - 1).node_ref().push_back(value) {
             None => {
                 if self.size == MAX_SIZE {
                     None
@@ -57,23 +54,26 @@ impl<T: Copy> InternalNode<T> {
         if self.size == 0 {
             0
         } else {
-            unsafe { self.slots[self.size - 1].read() }.accumulated_len()
+            self.get(self.size - 1).accumulated_len()
         }
     }
 
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    pub fn get(&self, index: usize) -> Slot<T> {
+        unsafe { self.slots[index].read() }
+    }
+
     pub fn level(&self) -> usize {
-        unsafe { self.slots[self.size - 1].read() }
-            .node_ref()
-            .level()
-            + 1
+        self.get(self.size - 1).node_ref().level() + 1
     }
 
     pub fn balanced(&self) -> bool {
         let level = self.level() - 1;
 
-        self.slots[..self.size]
-            .iter()
-            .all(|node_ref| unsafe { node_ref.read() }.node_ref().level() == level)
+        (0..self.size).all(|index| self.get(index).node_ref().level() == level)
     }
 
     fn append_slot(&mut self, node_ref: NodeRef<T>) {
@@ -89,8 +89,67 @@ impl<T: Copy> InternalNode<T> {
             if self.size == 1 {
                 0
             } else {
-                unsafe { self.slots[self.size - 2].read() }.accumulated_len()
+                self.get(self.size - 2).accumulated_len()
             },
         ));
+    }
+}
+
+impl<'a, T: Copy> IntoIterator for &'a InternalNode<T> {
+    type IntoIter = InternalNodeIterator<'a, T>;
+    type Item = NodeRef<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        InternalNodeIterator {
+            internal_node: self,
+            index: 0,
+        }
+    }
+}
+
+pub struct InternalNodeIterator<'a, T: Copy> {
+    internal_node: &'a InternalNode<T>,
+    index: usize,
+}
+
+impl<'a, T: Copy> Iterator for InternalNodeIterator<'a, T> {
+    type Item = NodeRef<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.internal_node.size() {
+            None
+        } else {
+            let node_ref = self.internal_node.get(self.index).node_ref();
+
+            self.index += 1;
+
+            Some(node_ref)
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::super::leaf_node::LeafNode;
+    use super::super::node_ref::NodeRef;
+    use super::InternalNode;
+
+    #[test]
+    fn new() {
+        InternalNode::<usize>::new(&[]);
+        InternalNode::new(&[LeafNode::new(&[42])]);
+    }
+
+    #[test]
+    fn iterator() {
+        let node_ref = InternalNode::new(&[LeafNode::new(&[42])]);
+        let iter = node_ref.as_internal().unwrap().into_iter();
+
+        assert_eq!(iter.collect::<Vec<NodeRef<usize>>>().len(), 1);
+
+        let node_ref = InternalNode::new(&[LeafNode::new(&[42]), LeafNode::new(&[42])]);
+        let iter = node_ref.as_internal().unwrap().into_iter();
+
+        assert_eq!(iter.collect::<Vec<NodeRef<usize>>>().len(), 2);
     }
 }

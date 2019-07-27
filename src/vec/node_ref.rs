@@ -51,6 +51,20 @@ impl<T: Copy> NodeRef<T> {
             ConcreteNodeRef::LeafNode(leaf_node) => leaf_node.len(),
         }
     }
+
+    pub fn as_internal(&self) -> Option<&InternalNode<T>> {
+        match self.as_ref() {
+            ConcreteNodeRef::InternalNode(internal_node) => Some(internal_node),
+            ConcreteNodeRef::LeafNode(_) => None,
+        }
+    }
+
+    pub fn as_leaf(&self) -> Option<&LeafNode<T>> {
+        match self.as_ref() {
+            ConcreteNodeRef::InternalNode(_) => None,
+            ConcreteNodeRef::LeafNode(leaf_node) => Some(leaf_node),
+        }
+    }
 }
 
 impl<T: Copy> From<InternalNode<T>> for NodeRef<T> {
