@@ -33,10 +33,8 @@ impl<T: Copy> NodeRef<T> {
 
     pub fn push_back(&self, value: T) -> Option<Self> {
         match self.as_ref() {
-            ConcreteNodeRef::InternalNode(internal_node) => {
-                internal_node.push_back(value).map(Self::internal)
-            }
-            ConcreteNodeRef::LeafNode(leaf_node) => leaf_node.push_back(value).map(Self::leaf),
+            ConcreteNodeRef::InternalNode(internal_node) => internal_node.push_back(value),
+            ConcreteNodeRef::LeafNode(leaf_node) => leaf_node.push_back(value),
         }
     }
 

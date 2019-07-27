@@ -12,7 +12,7 @@ pub struct InternalNode<T: Copy> {
 }
 
 impl<T: Copy> InternalNode<T> {
-    pub fn new(node_refs: &[NodeRef<T>]) -> Self {
+    pub fn new(node_refs: &[NodeRef<T>]) -> NodeRef<T> {
         let mut internal_node = Self {
             slots: [MaybeUninit::uninit(); 32],
             size: 0,
@@ -22,10 +22,10 @@ impl<T: Copy> InternalNode<T> {
             internal_node.append_slot(*node_ref);
         }
 
-        internal_node
+        internal_node.into()
     }
 
-    pub fn push_back(&self, value: T) -> Option<Self> {
+    pub fn push_back(&self, value: T) -> Option<NodeRef<T>> {
         match unsafe { self.slots[self.size - 1].read() }
             .node_ref()
             .push_back(value)
@@ -39,7 +39,7 @@ impl<T: Copy> InternalNode<T> {
 
                     assert!(internal_node.balanced());
 
-                    Some(internal_node)
+                    Some(internal_node.into())
                 }
             }
             Some(node_ref) => {
@@ -48,7 +48,7 @@ impl<T: Copy> InternalNode<T> {
 
                 assert!(internal_node.balanced());
 
-                Some(internal_node)
+                Some(internal_node.into())
             }
         }
     }

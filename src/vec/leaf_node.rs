@@ -1,3 +1,4 @@
+use super::node_ref::NodeRef;
 use std::mem::MaybeUninit;
 
 const MAX_LEN: usize = 32;
@@ -9,7 +10,7 @@ pub struct LeafNode<T: Copy> {
 }
 
 impl<T: Copy> LeafNode<T> {
-    pub fn new(values: &[T]) -> Self {
+    pub fn new(values: &[T]) -> NodeRef<T> {
         let mut leaf_node = Self {
             values: [MaybeUninit::uninit(); 32],
             len: 0,
@@ -20,10 +21,10 @@ impl<T: Copy> LeafNode<T> {
             leaf_node.len += 1;
         }
 
-        leaf_node
+        leaf_node.into()
     }
 
-    pub fn push_back(&self, value: T) -> Option<Self> {
+    pub fn push_back(&self, value: T) -> Option<NodeRef<T>> {
         if self.len == MAX_LEN {
             None
         } else {
@@ -32,7 +33,7 @@ impl<T: Copy> LeafNode<T> {
             leaf_node.values[leaf_node.len] = MaybeUninit::new(value);
             leaf_node.len += 1;
 
-            Some(leaf_node)
+            Some(leaf_node.into())
         }
     }
 

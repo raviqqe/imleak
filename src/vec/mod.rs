@@ -18,7 +18,7 @@ pub struct Vec<T: Copy> {
 impl<T: Copy> Vec<T> {
     pub fn new() -> Self {
         Self {
-            root: NodeRef::leaf(LeafNode::new(&[])),
+            root: LeafNode::new(&[]),
             len: 0,
         }
     }
