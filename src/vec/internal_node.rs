@@ -2,7 +2,8 @@ use super::constants::MAX_SIZE;
 use super::node_ref::NodeRef;
 use super::slot::Slot;
 use super::utilities::create_branch;
-use std::mem::MaybeUninit;
+use std::mem::{transmute, MaybeUninit};
+use std::ops::Index;
 
 #[derive(Clone)]
 pub struct InternalNode<T: Copy> {
@@ -31,7 +32,7 @@ impl<T: Copy> InternalNode<T> {
                     None
                 } else {
                     let mut internal_node = self.clone();
-                    internal_node.update_slot(create_branch(value, self.level() - 1));
+                    internal_node.append_slot(create_branch(value, self.level() - 1));
 
                     assert!(internal_node.balanced());
 
@@ -91,6 +92,27 @@ impl<T: Copy> InternalNode<T> {
                 self.get(self.size - 2).accumulated_len()
             },
         ));
+    }
+}
+
+impl<T: Copy> Index<usize> for &InternalNode<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        let mut last_len: usize = 0;
+
+        for slot_index in 0..self.size {
+            let slot = self.get(slot_index);
+
+            if index < slot.accumulated_len() {
+                // TODO: Handle lifetimes properly.
+                return unsafe { transmute(slot.node_ref().index(index - last_len)) };
+            } else {
+                last_len = slot.accumulated_len();
+            }
+        }
+
+        unreachable!()
     }
 }
 

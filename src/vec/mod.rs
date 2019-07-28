@@ -8,6 +8,7 @@ mod utilities;
 use internal_node::InternalNode;
 use leaf_node::LeafNode;
 use node_ref::NodeRef;
+use std::ops::Index;
 use utilities::create_branch;
 
 #[derive(Clone, Debug)]
@@ -42,6 +43,14 @@ impl<T: Copy> Vec<T> {
     }
 }
 
+impl<T: Copy> Index<usize> for Vec<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.root[index]
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::Vec;
@@ -59,6 +68,19 @@ mod test {
             vec = vec.push_back(index);
 
             assert_eq!(vec.len(), index + 1);
+        }
+    }
+
+    #[test]
+    fn index() {
+        let mut vec = Vec::<usize>::new();
+
+        for value in 0..100 {
+            vec = vec.push_back(value);
+
+            for index in 0..(value + 1) {
+                assert_eq!(vec[index], index);
+            }
         }
     }
 }

@@ -2,6 +2,8 @@ use super::internal_node::InternalNode;
 use super::leaf_node::LeafNode;
 use crate::tagged_ref::TaggedRef;
 use std::marker::PhantomData;
+use std::mem::transmute;
+use std::ops::Index;
 
 #[derive(Clone, Copy, Debug)]
 pub struct NodeRef<T: Copy> {
@@ -84,6 +86,20 @@ impl<T: Copy> From<InternalNode<T>> for NodeRef<T> {
 impl<T: Copy> From<LeafNode<T>> for NodeRef<T> {
     fn from(leaf_node: LeafNode<T>) -> Self {
         Self::leaf(leaf_node)
+    }
+}
+
+impl<T: Copy> Index<usize> for NodeRef<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        // TODO: Handle lifetimes properly.
+        match self.as_ref() {
+            ConcreteNodeRef::InternalNode(internal_node) => unsafe {
+                transmute(internal_node.index(index))
+            },
+            ConcreteNodeRef::LeafNode(leaf_node) => unsafe { transmute(leaf_node.index(index)) },
+        }
     }
 }
 

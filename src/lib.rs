@@ -1,4 +1,4 @@
-#![feature(maybe_uninit_extra, test)]
+#![feature(maybe_uninit_extra, maybe_uninit_ref, test)]
 
 #[cfg(test)]
 extern crate rand;

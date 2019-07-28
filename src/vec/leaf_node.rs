@@ -2,6 +2,7 @@ use super::constants::MAX_SIZE;
 use super::node_ref::NodeRef;
 use std::fmt::{self, Debug, Formatter};
 use std::mem::MaybeUninit;
+use std::ops::Index;
 
 #[derive(Clone)]
 pub struct LeafNode<T: Copy> {
@@ -80,6 +81,18 @@ impl<'a, T: Copy> Iterator for LeafNodeIterator<'a, T> {
 
             Some(value)
         }
+    }
+}
+
+impl<T: Copy> Index<usize> for &LeafNode<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        if index >= self.len {
+            unreachable!()
+        }
+
+        unsafe { self.values[index].get_ref() }
     }
 }
 
