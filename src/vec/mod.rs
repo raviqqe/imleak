@@ -86,6 +86,8 @@ impl<'a, T: Copy> Iterator for VecIterator<'a, T> {
 mod test {
     use super::Vec;
 
+    const ITERATIONS: usize = 2000;
+
     #[test]
     fn new() {
         Vec::<usize>::new();
@@ -95,7 +97,7 @@ mod test {
     fn push_back() {
         let mut vec = Vec::<usize>::new();
 
-        for index in 0..1000 {
+        for index in 0..ITERATIONS {
             vec = vec.push_back(index);
 
             assert_eq!(vec.len(), index + 1);
@@ -106,7 +108,7 @@ mod test {
     fn index() {
         let mut vec = Vec::<usize>::new();
 
-        for value in 0..100 {
+        for value in 0..ITERATIONS {
             vec = vec.push_back(value);
 
             for index in 0..(value + 1) {
@@ -120,7 +122,7 @@ mod test {
         let mut vec = Vec::<usize>::new();
         let mut std_vec = vec![];
 
-        for value in 0..100 {
+        for value in 0..ITERATIONS {
             vec = vec.push_back(value);
             std_vec.push(value);
         }
