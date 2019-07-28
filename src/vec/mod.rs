@@ -47,7 +47,38 @@ impl<T: Copy> Index<usize> for Vec<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
-        &self.root[index]
+        self.root.index(index)
+    }
+}
+
+impl<'a, T: Copy> IntoIterator for &'a Vec<T> {
+    type IntoIter = VecIterator<'a, T>;
+    type Item = T;
+
+    fn into_iter(self) -> Self::IntoIter {
+        VecIterator {
+            vec: self,
+            index: 0,
+        }
+    }
+}
+
+pub struct VecIterator<'a, T: Copy> {
+    vec: &'a Vec<T>,
+    index: usize,
+}
+
+impl<'a, T: Copy> Iterator for VecIterator<'a, T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index == self.vec.len() {
+            None
+        } else {
+            let value = self.vec[self.index];
+            self.index += 1;
+            Some(value)
+        }
     }
 }
 
@@ -82,5 +113,18 @@ mod test {
                 assert_eq!(vec[index], index);
             }
         }
+    }
+
+    #[test]
+    fn iterator() {
+        let mut vec = Vec::<usize>::new();
+        let mut std_vec = vec![];
+
+        for value in 0..100 {
+            vec = vec.push_back(value);
+            std_vec.push(value);
+        }
+
+        assert_eq!(vec.into_iter().collect::<std::vec::Vec<usize>>(), std_vec)
     }
 }
