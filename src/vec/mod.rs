@@ -7,7 +7,7 @@ mod utilities;
 
 use internal_node::InternalNode;
 use leaf_node::LeafNode;
-use node_ref::NodeRef;
+use node_ref::{ConcreteNodeRef, NodeRef};
 use std::ops::Index;
 use utilities::create_branch;
 
@@ -35,30 +35,39 @@ impl<T: Copy> Vec<T> {
     }
 
     pub fn append(&self, other: &Vec<T>) -> Vec<T> {
-        let mut root = None;
-        let mut rest = None;
+        match self.root.as_ref() {
+            ConcreteNodeRef::InternalNode(internal_node) => {
+                let mut root = Some(internal_node);
+                let mut rest = None;
 
-        for index in 0.. {
-            match (self.root.right_internal(index), other.root.left_internal(0)) {
-                (None, _) => {
-                    return Self {
-                        root,
-                        len: leaf_node.len(),
+                for index in 0.. {
+                    match (
+                        self.root.as_internal().unwrap().right_internal(index),
+                        other.root.left_internal(0),
+                    ) {
+                        (None, _) => {
+                            return Self {
+                                root,
+                                len: leaf_node.len(),
+                            }
+                        }
+                        (_, None) => {
+                            return Self {
+                                root: leaf_node,
+                                len: leaf_node.len(),
+                            }
+                        }
+                        (Some(left_internal_node), Some(right_internal_node)) => {
+                            let (root, new_rest) =
+                                left_internal_node.append(rest, right_internal_node);
+                        }
                     }
                 }
-                (_, None) => {
-                    return Self {
-                        root: leaf_node,
-                        len: leaf_node.len(),
-                    }
-                }
-                (Some(left_internal_node), Some(right_internal_node)) => {
-                    let (root, new_rest) = left_internal_node.append(rest, right_internal_node);
-                }
+
+                unreachable!()
             }
+            ConcreteNodeRef::LeafNode(leaf_node) => unimplemented!(),
         }
-
-        unreachable!()
     }
 
     pub fn len(&self) -> usize {
