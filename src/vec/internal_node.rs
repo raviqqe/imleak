@@ -1,5 +1,6 @@
 use super::constants::MAX_SIZE;
-use super::node_ref::NodeRef;
+use super::leaf_node::LeafNode;
+use super::node_ref::{ConcreteNodeRef, NodeRef};
 use super::slot::Slot;
 use super::utilities::create_branch;
 use std::mem::{transmute, MaybeUninit};
@@ -13,6 +14,8 @@ pub struct InternalNode<T: Copy> {
 
 impl<T: Copy> InternalNode<T> {
     pub fn new(node_refs: &[NodeRef<T>]) -> NodeRef<T> {
+        assert!(node_refs.len() <= MAX_SIZE);
+
         let mut internal_node = Self {
             slots: [MaybeUninit::uninit(); 32],
             size: 0,
@@ -76,6 +79,39 @@ impl<T: Copy> InternalNode<T> {
         (0..self.size).all(|index| self.get(index).node_ref().level() == level)
     }
 
+    pub fn append(&self, other: &Self) -> (NodeRef<T>, Option<NodeRef<T>>) {
+        assert!(self.size > 0);
+
+        match self.get(0).node_ref().as_ref() {
+            ConcreteNodeRef::InternalNode(_) => unimplemented!(),
+            ConcreteNodeRef::LeafNode(_) => {
+                let len = self.len() + other.len();
+
+                if len <= MAX_SIZE * MAX_SIZE {
+                    (
+                        Self::new(
+                            &(0..len)
+                                .collect::<Vec<_>>()
+                                .chunks(MAX_SIZE)
+                                .map(|indices| {
+                                    LeafNode::new(
+                                        &indices
+                                            .iter()
+                                            .map(|index| self[*index])
+                                            .collect::<Vec<_>>(),
+                                    )
+                                })
+                                .collect::<Vec<_>>(),
+                        ),
+                        None,
+                    )
+                } else {
+                    unimplemented!()
+                }
+            }
+        }
+    }
+
     fn append_slot(&mut self, node_ref: NodeRef<T>) {
         self.slots[self.size] = MaybeUninit::new(Slot::new(node_ref, self.len()));
         self.size += 1;
@@ -92,6 +128,26 @@ impl<T: Copy> InternalNode<T> {
                 self.get(self.size - 2).accumulated_len()
             },
         ));
+    }
+
+    pub fn left_internal(&self, level: usize) -> NodeRef<T> {
+        let node_ref = self.get(0);
+
+        if level == 0 {
+            node_ref
+        } else {
+            node_ref.left_internal(level - 1)
+        }
+    }
+
+    pub fn right_internal(&self, level: usize) -> NodeRef<T> {
+        let node_ref = self.get(self.size - 1);
+
+        if level == 0 {
+            node_ref
+        } else {
+            node_ref.right_internal(level - 1)
+        }
     }
 }
 

@@ -75,6 +75,16 @@ impl<T: Copy> NodeRef<T> {
             ConcreteNodeRef::LeafNode(leaf_node) => leaf_node.len(),
         }
     }
+
+    pub fn left_internal(&self, level: usize) -> Option<NodeRef<T>> {
+        self.as_internal()
+            .map(|internal_node| internal_node.left_internal(level))
+    }
+
+    pub fn right_internal(&self, level: usize) -> Option<NodeRef<T>> {
+        self.as_internal()
+            .map(|internal_node| internal_node.right_internal(level))
+    }
 }
 
 impl<T: Copy> From<InternalNode<T>> for NodeRef<T> {

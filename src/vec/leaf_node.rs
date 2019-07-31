@@ -12,6 +12,8 @@ pub struct LeafNode<T: Copy> {
 
 impl<T: Copy> LeafNode<T> {
     pub fn new(values: &[T]) -> NodeRef<T> {
+        assert!(values.len() <= MAX_SIZE);
+
         let mut leaf_node = Self {
             values: [MaybeUninit::uninit(); 32],
             len: 0,
